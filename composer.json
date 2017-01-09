@@ -1,0 +1,24 @@
+{
+	"name": "vanilla/garden-db",
+	"description": "A light but powerful database abstraction layer.",
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Todd Burry",
+			"email": "todd@vanillaforums.com"
+		}
+	],
+	"require": {
+		"php": ">=5.4.0"
+	},
+	"autoload": {
+		"psr-4": {
+			"Garden\\Db\\": "src"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Garden\\Db\\Tests\\": "tests"
+		}
+	}
+}
