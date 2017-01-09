@@ -10,7 +10,7 @@ namespace Garden\Db;
 /**
  * A helper class for creating database tables.
  */
-class DbDef implements \JsonSerializable {
+class TableDef implements \JsonSerializable {
     /// Properties ///
 
     /**
@@ -37,7 +37,7 @@ class DbDef implements \JsonSerializable {
     /// Methods ///
 
     /**
-     * Initialize an instance of the {@link DbDef} class.
+     * Initialize an instance of the {@link TableDef} class.
      *
      * @param Db $db The database to execute against.
      */
@@ -48,7 +48,7 @@ class DbDef implements \JsonSerializable {
     /**
      * Reset the internal state of this object so that it can be re-used.
      *
-     * @return DbDef Returns $this for fluent calls.
+     * @return TableDef Returns $this for fluent calls.
      */
     public function reset() {
         $this->table = '';
@@ -74,7 +74,7 @@ class DbDef implements \JsonSerializable {
      * : The column is required and this is its default.
      *
      * @param string|array $index The index that the column participates in.
-     * @return DbDef
+     * @return TableDef
      */
     public function column($name, $type, $nullDefault = false, $index = null) {
         $this->columns[$name] = $this->columnDef($type, $nullDefault);
@@ -129,7 +129,7 @@ class DbDef implements \JsonSerializable {
      *
      * @param string $name The name of the column.
      * @param string $type The datatype for the column.
-     * @return DbDef
+     * @return TableDef
      */
     public function primaryKey($name, $type = 'int') {
         $column = $this->columnDef($type, false);
@@ -148,7 +148,7 @@ class DbDef implements \JsonSerializable {
      * Set the name of the table.
      *
      * @param string|null $name The name of the table.
-     * @return DbDef|string Returns $this for fluent calls.
+     * @return TableDef|string Returns $this for fluent calls.
      */
     public function table($name = null) {
         if ($name !== null) {
@@ -164,7 +164,7 @@ class DbDef implements \JsonSerializable {
      * @param string|array $columns An array of columns or a single column name.
      * @param string $type One of the `Db::INDEX_*` constants.
      * @param string $suffix An index suffix to group columns together in an index.
-     * @return DbDef Returns $this for fluent calls.
+     * @return TableDef Returns $this for fluent calls.
      */
     public function index($columns, $type, $suffix = '') {
         $type = strtolower($type);
@@ -213,7 +213,7 @@ class DbDef implements \JsonSerializable {
      *
      * @param string $key The option key.
      * @param mixed $value The option value.
-     * @return DbDef Returns $this for fluent calls.
+     * @return TableDef Returns $this for fluent calls.
      */
     public function option($key, $value) {
         $this->options[$key] = $value;

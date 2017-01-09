@@ -8,7 +8,7 @@
 namespace Garden\Tests\Db;
 
 use Garden\Db\Db;
-use Garden\Db\DbDef;
+use Garden\Db\TableDef;
 
 /**
  * Test the basic functionality of the Db* classes.
@@ -150,7 +150,7 @@ abstract class DbTest extends BaseDbTest {
      */
     public function testInsertUpsertMultiKey() {
         $db = self::$db;
-        $dbdef = new DbDef($db);
+        $dbdef = new TableDef($db);
 
         $db->dropTable('userMeta', [Db::OPTION_IGNORE => true]);
         $dbdef->table('userMeta')

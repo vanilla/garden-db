@@ -8,10 +8,10 @@
 namespace Garden\Tests\Db;
 
 use Garden\Db\Db;
-use Garden\Db\DbDef;
+use Garden\Db\TableDef;
 
 /**
- * Test various aspects of the {@link DbDef} class and the {@link Db} class as it relates to it.
+ * Test various aspects of the {@link TableDef} class and the {@link Db} class as it relates to it.
  */
 abstract class DbDefTest extends BaseDbTest {
     /**
@@ -38,7 +38,7 @@ abstract class DbDefTest extends BaseDbTest {
      */
     public function testAlterTableColumns() {
         $db = self::$db;
-        $def = new DbDef();
+        $def = new TableDef();
         $tbl = 'tstAlterTableColumns';
 
         $def->table($tbl)
@@ -65,7 +65,7 @@ abstract class DbDefTest extends BaseDbTest {
      */
     public function testAlterTableWithDrop() {
         $db = self::$db;
-        $def = new DbDef($db);
+        $def = new TableDef($db);
         $tbl = 'tstAlterTableWithDrop';
 
         $def->table($tbl)
@@ -95,7 +95,7 @@ abstract class DbDefTest extends BaseDbTest {
      */
     public function testAlterPrimaryKey() {
         $db = self::$db;
-        $def = new DbDef($db);
+        $def = new TableDef($db);
         $tbl = 'tstAlterPrimaryKey';
 
         $def->table($tbl)
@@ -123,7 +123,7 @@ abstract class DbDefTest extends BaseDbTest {
      */
     public function testReorderPrimaryKey() {
         $db = self::$db;
-        $def = new DbDef($db);
+        $def = new TableDef($db);
         $tbl = 'tstReorderPrimaryKey';
 
         $def->table($tbl)

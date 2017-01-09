@@ -8,7 +8,7 @@
 namespace Garden\Tests\Db;
 
 use Garden\Db\Db;
-use Garden\Db\DbDef;
+use Garden\Db\TableDef;
 
 /**
  * The base class for database tests.
@@ -33,10 +33,10 @@ abstract class BaseDbTest extends \PHPUnit_Framework_TestCase {
     /**
      * Get the database def.
      *
-     * @return DbDef Returns the db def.
+     * @return TableDef Returns the db def.
      */
     protected static function createDbDef() {
-        return new DbDef(self::$db);
+        return new TableDef(self::$db);
     }
 
     /**
