@@ -19,11 +19,6 @@ class TableDef implements \JsonSerializable {
     private $columns;
 
     /**
-     * @var array Options to send to the table definitaion call.
-     */
-    private $options;
-
-    /**
      *
      * @var string The name of the currently working table.
      */
@@ -205,18 +200,6 @@ class TableDef implements \JsonSerializable {
             }
         }
 
-        return $this;
-    }
-
-    /**
-     * Set an option that will be passed on to the final {@link Db::setTableDef()} call.
-     *
-     * @param string $key The option key.
-     * @param mixed $value The option value.
-     * @return TableDef Returns $this for fluent calls.
-     */
-    public function option($key, $value) {
-        $this->options[$key] = $value;
         return $this;
     }
 

@@ -79,9 +79,8 @@ abstract class DbDefTest extends BaseDbTest {
             ->column('colb', 'int')
             ->column('col2', 'int')
             ->index('col2', Db::INDEX_IX)
-            ->option(Db::OPTION_DROP, true)
             ->toArray();
-        $db->setTableDef($expected);
+        $db->setTableDef($expected, [Db::OPTION_DROP => true]);
 
         $actual = $db
             ->reset()
