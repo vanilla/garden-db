@@ -20,7 +20,10 @@ class MySqlDb extends Db {
      */
     protected $pdo;
 
-    protected $config;
+    /**
+     * @var string
+     */
+    protected $dbname;
 
     protected static $map = [
         Db::OP_GT => '>',
@@ -40,10 +43,10 @@ class MySqlDb extends Db {
     /**
      * Initialize an instance of the {@link MySqlDb} class.
      *
-     * @param array $config The database config.
+     * @param PDO $pdo The connection to the database.
      */
-    public function __construct(array $config = []) {
-        $this->config = $config;
+    public function __construct(PDO $pdo) {
+        $this->pdo = $pdo;
     }
 
     /**
@@ -113,7 +116,7 @@ class MySqlDb extends Db {
 
         $result = null;
         if ($mode & Db::MODE_EXEC) {
-            $result = $this->pdo()->query($sql);
+            $result = $this->getPDO()->query($sql);
 
             if ($type == Db::QUERY_READ) {
                 $result->setFetchMode(PDO::FETCH_ASSOC);
@@ -125,7 +128,7 @@ class MySqlDb extends Db {
             }
         } elseif ($mode & Db::MODE_PDO) {
             /* @var \PDOStatement $result */
-            $result = $this->pdo()->prepare($sql);
+            $result = $this->getPDO()->prepare($sql);
         }
 
         return $result;
@@ -418,7 +421,7 @@ class MySqlDb extends Db {
     public function bracketList($row, $quote = "'") {
         switch ($quote) {
             case "'":
-                $row = array_map([$this->pdo(), 'quote'], $row);
+                $row = array_map([$this->getPDO(), 'quote'], $row);
                 $quote = '';
                 break;
             case '`':
@@ -435,23 +438,19 @@ class MySqlDb extends Db {
      *
      * @return \PDO
      */
-    public function pdo() {
-        $dsnParts = array_translate($this->config, ['host', 'dbname', 'port']);
-        $dsn = 'mysql:'.implode_assoc(';', '=', $dsnParts);
-
-        if (!isset($this->pdo)) {
-            $this->pdo = new PDO(
-                $dsn,
-                self::val('username', $this->config, ''),
-                self::val('password', $this->config, ''),
-                [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::MYSQL_ATTR_INIT_COMMAND => 'set names utf8'
-                ]
-            );
-        }
+    public function getPDO() {
         return $this->pdo;
+    }
+
+    /**
+     * Set the connection to the database.
+     *
+     * @param PDO $pdo The new connection to the database.
+     * @return $this
+     */
+    public function setPDO(PDO $pdo) {
+        $this->pdo = $pdo;
+        return $this;
     }
 
     /**
@@ -466,7 +465,7 @@ class MySqlDb extends Db {
             /* @var Literal $value */
             return $value->getValue('mysql');
         } elseif ($quote) {
-            return $this->pdo()->quote($value);
+            return $this->getPDO()->quote($value);
         } else {
             return $value;
         }
@@ -477,8 +476,11 @@ class MySqlDb extends Db {
      *
      * @return mixed
      */
-    public function getDbName() {
-        return self::val('dbname', $this->config);
+    private function getDbName() {
+        if (!isset($this->dbname)) {
+            $this->dbname = $this->pdo->query('select database()')->fetchColumn();
+        }
+        return $this->dbname;
     }
 
     /**
@@ -652,7 +654,7 @@ class MySqlDb extends Db {
     public function insert($tablename, array $rows, array $options = []) {
         $sql = $this->buildInsert($tablename, $rows, true, $options);
         $this->query($sql, Db::QUERY_WRITE);
-        $id = $this->pdo()->lastInsertId();
+        $id = $this->getPDO()->lastInsertId();
         if (is_numeric($id)) {
             return (int)$id;
         } else {
@@ -733,7 +735,7 @@ class MySqlDb extends Db {
                 }
 
                 $sql = $this->buildInsert($tablename, $spec, false, $options);
-                $stmt = $this->pdo()->prepare($sql);
+                $stmt = $this->getPDO()->prepare($sql);
                 $first = false;
             }
 

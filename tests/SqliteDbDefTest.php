@@ -25,9 +25,7 @@ class SqliteDbDefTest extends DbDefTest {
             $path = __DIR__.'/cache/dbdeftest.sqlite';
         }
 
-        $db = new SqliteDb([
-            'path' => $path,
-        ]);
+        $db = new SqliteDb(new \PDO("sqlite:$path"));
 
         $db->setPx('tst_');
 

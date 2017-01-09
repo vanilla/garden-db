@@ -82,34 +82,6 @@ abstract class Db {
     /// Methods ///
 
     /**
-     * Create the appropriate db driver given a config.
-     *
-     * @param array $config The configuration used to initialize the object.
-     * The config must have a driver key which names the db class to create.
-     * @throws \Exception Throws an exception when the config isn't complete.
-     */
-    public static function create($config) {
-        $driver = self::val('driver', $config);
-        if (!$driver) {
-            throw new \Exception('You must specify a driver.', 500);
-        }
-
-        if (strpos($driver, '\\') === false) {
-            $class = '\Garden\Db\\'.$driver;
-        } else {
-            // TODO: Check against a white list of db drivers.
-            $class = $driver;
-        }
-
-        if (!class_exists($class)) {
-            throw new \Exception("Class $class does not exist.", 500);
-        }
-
-        $db = new $class($config);
-        return $db;
-    }
-
-    /**
      * Add a table to the database.
      *
      * @param string $tablename The name of the table.

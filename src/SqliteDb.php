@@ -455,20 +455,6 @@ class SqliteDb extends MySqlDb {
     }
 
     /**
-     * Gets the {@link PDO} object for this connection.
-     *
-     * @return \PDO
-     */
-    public function pdo() {
-        $dsn = 'sqlite:'.$this->config['path'];
-
-        if (!isset($this->pdo)) {
-            $this->pdo = new PDO($dsn, self::val('username', $this->config, null), self::val('password', $this->config, null));
-        }
-        return $this->pdo;
-    }
-
-    /**
      * Optionally quote a where value.
      *
      * @param mixed $value The value to quote.
@@ -486,7 +472,7 @@ class SqliteDb extends MySqlDb {
         } elseif ($value === false) {
             return '0';
         } elseif ($quote) {
-            return $this->pdo()->quote($value);
+            return $this->getPDO()->quote($value);
         } else {
             return $value;
         }
