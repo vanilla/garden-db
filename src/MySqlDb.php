@@ -825,21 +825,23 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    protected function createTable($tablename, array $tabledef, array $options = []) {
+    protected function createTable(array $tableDef, array $options = []) {
+        $tableName = $tableDef['name'];
+
         // The table doesn't exist so this is a create table.
         $parts = array();
-        foreach ($tabledef['columns'] as $name => $def) {
+        foreach ($tableDef['columns'] as $name => $def) {
             $parts[] = $this->columnDefString($name, $def);
         }
 
-        foreach (self::val('indexes', $tabledef, []) as $index) {
-            $indexDef = $this->indexDefString($tablename, $index);
+        foreach (self::val('indexes', $tableDef, []) as $index) {
+            $indexDef = $this->indexDefString($tableName, $index);
             if ($indexDef) {
                 $parts[] = $indexDef;
             }
         }
 
-        $fullTablename = $this->backtick($this->px.$tablename);
+        $fullTablename = $this->backtick($this->px.$tableName);
         $sql = "create table $fullTablename (\n  ".
             implode(",\n  ", $parts).
             "\n)";
@@ -904,30 +906,31 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    protected function alterTable($tablename, array $alterdef, array $options = []) {
-        $columnOrders = $this->getColumnOrders($alterdef['def']['columns']);
+    protected function alterTable(array $alterDef, array $options = []) {
+        $tablename = $alterDef['name'];
+        $columnOrders = $this->getColumnOrders($alterDef['def']['columns']);
         $parts = [];
 
         // Add the columns and indexes.
-        foreach ($alterdef['add']['columns'] as $cname => $cdef) {
+        foreach ($alterDef['add']['columns'] as $cname => $cdef) {
             // Figure out the order of the column.
             $pos = self::val($cname, $columnOrders, '');
             $parts[] = 'add '.$this->columnDefString($cname, $cdef).$pos;
         }
-        foreach ($alterdef['add']['indexes'] as $ixdef) {
+        foreach ($alterDef['add']['indexes'] as $ixdef) {
             $parts[] = 'add '.$this->indexDefString($tablename, $ixdef);
         }
 
         // Alter the columns.
-        foreach ($alterdef['alter']['columns'] as $cname => $cdef) {
+        foreach ($alterDef['alter']['columns'] as $cname => $cdef) {
             $parts[] = 'modify '.$this->columnDefString($cname, $cdef);
         }
 
         // Drop the columns and indexes.
-        foreach ($alterdef['drop']['columns'] as $cname => $_) {
+        foreach ($alterDef['drop']['columns'] as $cname => $_) {
             $parts[] = 'drop '.$this->backtick($cname);
         }
-        foreach ($alterdef['drop']['indexes'] as $ixdef) {
+        foreach ($alterDef['drop']['indexes'] as $ixdef) {
             $parts[] = 'drop index '.$this->backtick($ixdef['name']);
         }
 

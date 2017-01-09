@@ -84,11 +84,10 @@ abstract class Db {
     /**
      * Add a table to the database.
      *
-     * @param string $tablename The name of the table.
-     * @param array $tabledef The table definition.
+     * @param array $tableDef The table definition.
      * @param array $options An array of additional options when adding the table.
      */
-    abstract protected function createTable($tablename, array $tabledef, array $options = []);
+    abstract protected function createTable(array $tableDef, array $options = []);
 
     /**
      * Alter a table in the database.
@@ -96,11 +95,10 @@ abstract class Db {
      * When altering a table you pass an array with three optional keys: add, drop, and alter.
      * Each value is consists of a table definition in a format that would be passed to {@link Db::setTableDef()}.
      *
-     * @param string $tablename The name of the table.
-     * @param array $alterdef The alter definition.
+     * @param array $alterDef The alter definition.
      * @param array $options An array of additional options when adding the table.
      */
-    abstract protected function alterTable($tablename, array $alterdef, array $options = []);
+    abstract protected function alterTable(array $alterDef, array $options = []);
 
     /**
      * Drop a table.
@@ -158,7 +156,8 @@ abstract class Db {
      * @param array $tableDef The table definition.
      * @param array $options An array of additional options when adding the table.
      */
-    public function setTableDef($tablename, array $tableDef, array $options = []) {
+    public function setTableDef(array $tableDef, array $options = []) {
+        $tablename = $tableDef['name'];
         $ltablename = strtolower($tablename);
         $tableDef['name'] = $tablename;
         $drop = self::val(Db::OPTION_DROP, $options, false);
@@ -167,12 +166,12 @@ abstract class Db {
         $this->fixIndexes($tablename, $tableDef, $curTable);
 
         if (!$curTable) {
-            $this->createTable($tablename, $tableDef, $options);
+            $this->createTable($tableDef, $options);
             $this->tables[$ltablename] = $tableDef;
             return;
         }
         // This is the alter statement.
-        $alterDef = [];
+        $alterDef = ['name' => $tablename];
 
         // Figure out the columns that have changed.
         $curColumns = (array)self::val('columns', $curTable, []);
@@ -219,7 +218,7 @@ abstract class Db {
         $alterDef['def'] = $tableDef;
 
         // Alter the table.
-        $this->alterTable($tablename, $alterDef, $options);
+        $this->alterTable($alterDef, $options);
 
         // Update the cached schema.
         $tableDef['name'] = $tablename;

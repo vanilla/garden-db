@@ -16,8 +16,9 @@ class SqliteDb extends MySqlDb {
     /**
      * {@inheritdoc}
      */
-    protected function alterTable($tablename, array $alterdef, array $options = []) {
-        $this->alterTableMigrate($tablename, $alterdef, $options);
+    protected function alterTable(array $alterDef, array $options = []) {
+        $tablename = $alterDef['name'];
+        $this->alterTableMigrate($tablename, $alterDef, $options);
     }
 
     /**
@@ -27,7 +28,7 @@ class SqliteDb extends MySqlDb {
      * @param array $alterDef The new definition.
      * @param array $options An array of options for the migration.
      */
-    protected function alterTableMigrate($tablename, array $alterDef, array $options = []) {
+    private function alterTableMigrate($tablename, array $alterDef, array $options = []) {
         $currentDef = $this->getTableDef($tablename);
 
         // Merge the table definitions if we aren't dropping stuff.
@@ -50,7 +51,7 @@ class SqliteDb extends MySqlDb {
         $this->renameTable($tablename, $tmpTablename);
 
         // Create the new table.
-        $this->createTable($tablename, $tableDef, $options);
+        $this->createTable($tableDef, $options);
 
         // Figure out the columns that we can insert.
         $columns = array_keys(array_intersect_key($tableDef['columns'], $currentDef['columns']));
@@ -72,7 +73,7 @@ class SqliteDb extends MySqlDb {
      * @param string $oldname The old name of the table.
      * @param string $newname The new name of the table.
      */
-    protected function renameTable($oldname, $newname) {
+    private function renameTable($oldname, $newname) {
         $renameSql = 'alter table '.
             $this->backtick($this->px.$oldname).
             ' rename to '.
@@ -87,7 +88,7 @@ class SqliteDb extends MySqlDb {
      * @param array $alterDef The alter def.
      * @return array The new table def.
      */
-    protected function mergeTableDefs(array $tableDef, array $alterDef) {
+    private function mergeTableDefs(array $tableDef, array $alterDef) {
         $result = $tableDef;
 
         $result['columns'] = array_merge($result['columns'], $alterDef['def']['columns']);
@@ -191,22 +192,23 @@ class SqliteDb extends MySqlDb {
     /**
      * {@inheritdoc}
      */
-    protected function createTable($tablename, array $tabledef, array $options = []) {
+    protected function createTable(array $tableDef, array $options = []) {
+        $tablename = $tableDef['name'];
         $parts = [];
 
         // Make sure the primary key columns are defined first and in order.
         $autoinc = false;
-        if (isset($tabledef['indexes']['primary'])) {
-            $pkIndex = $tabledef['indexes']['primary'];
+        if (isset($tableDef['indexes']['primary'])) {
+            $pkIndex = $tableDef['indexes']['primary'];
             foreach ($pkIndex['columns'] as $column) {
-                $cdef = $tabledef['columns'][$column];
+                $cdef = $tableDef['columns'][$column];
                 $parts[] = $this->columnDefString($column, $cdef);
                 $autoinc |= self::val('autoincrement', $cdef, false);
-                unset($tabledef['columns'][$column]);
+                unset($tableDef['columns'][$column]);
             }
         }
 
-        foreach ($tabledef['columns'] as $name => $cdef) {
+        foreach ($tableDef['columns'] as $name => $cdef) {
             $parts[] = $this->columnDefString($name, $cdef);
         }
 
@@ -223,7 +225,7 @@ class SqliteDb extends MySqlDb {
         $this->query($sql, Db::QUERY_DEFINE);
 
         // Add the rest of the indexes.
-        foreach (self::val('indexes', $tabledef, []) as $index) {
+        foreach (self::val('indexes', $tableDef, []) as $index) {
             if (self::val('type', $index, Db::INDEX_IX) !== Db::INDEX_PK) {
                 $this->createIndex($tablename, $index, $options);
             }

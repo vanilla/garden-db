@@ -35,6 +35,7 @@ abstract class DbTest extends BaseDbTest {
      */
     public function testCreateTable() {
         $tableDef = [
+            'name' => 'user',
             'columns' => [
                 'userID' => ['type' => 'int', 'primary' => true, 'autoincrement' => true],
                 'name' => ['type' => 'varchar(50)', 'required' => true],
@@ -50,7 +51,7 @@ abstract class DbTest extends BaseDbTest {
             ]
         ];
 
-        self::$db->setTableDef('user', $tableDef);
+        self::$db->setTableDef($tableDef);
     }
 
     /**
@@ -250,8 +251,8 @@ abstract class DbTest extends BaseDbTest {
 
         // Create a table for the test.
         $db->setTableDef(
-            'tuple',
             [
+                'name' => 'tuple',
                 'columns' => [
                     'id' => ['type' => 'int']
                 ],

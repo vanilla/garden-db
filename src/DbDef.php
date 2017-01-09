@@ -57,7 +57,7 @@ class DbDef implements \JsonSerializable {
      * @return DbDef Returns $this for fluent calls.
      */
     public function reset() {
-        $this->table = null;
+        $this->table = '';
         $this->columns = [];
         $this->indexes = [];
         $this->options = [];
@@ -158,7 +158,6 @@ class DbDef implements \JsonSerializable {
      */
     public function exec($reset = true) {
         $this->db->setTableDef(
-            $this->table,
             $this->jsonSerialize(),
             $this->options
         );
