@@ -19,15 +19,15 @@ abstract class DbDefTest extends BaseDbTest {
      */
     public function testCreateTable() {
         $def = static::createDbDef();
-        $db = $def->getDb();
+        $db = self::$db;
 
         $def1 = $def->table('user')
             ->primaryKey('userID')
             ->column('name', 'varchar(50)')
             ->index('name', Db::INDEX_IX)
-            ->exec(false)
-            ->jsonSerialize();
+            ->toArray();
 
+        $db->setTableDef($def->toArray());
         $def2 = $db->getTableDef('user');
 
         $this->assertDefEquals('user', $def1, $def2);
@@ -38,23 +38,22 @@ abstract class DbDefTest extends BaseDbTest {
      */
     public function testAlterTableColumns() {
         $db = self::$db;
-        $def = new DbDef($db);
+        $def = new DbDef();
         $tbl = 'tstAlterTableColumns';
 
         $def->table($tbl)
             ->column('col1', 'int', false)
             ->column('col2', 'int', 0)
-            ->index('col1', Db::INDEX_IX)
-            ->exec();
+            ->index('col1', Db::INDEX_IX);
 
         $expected = $def->table($tbl)
             ->column('cola', 'int', false)
             ->column('colb', 'int', false)
             ->column('col2', 'int', false)
             ->index('col1', Db::INDEX_IX)
-            ->exec(false)
-            ->jsonSerialize();
+            ->toArray();
 
+        $db->setTableDef($expected);
         $db->reset();
         $actual = $db->getTableDef($tbl);
 
@@ -73,7 +72,7 @@ abstract class DbDefTest extends BaseDbTest {
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
             ->index('col1', Db::INDEX_IX);
-        $def->exec();
+        $db->setTableDef($def->toArray());
 
         $expected = $def->table($tbl)
             ->column('cola', 'int')
@@ -81,8 +80,8 @@ abstract class DbDefTest extends BaseDbTest {
             ->column('col2', 'int')
             ->index('col2', Db::INDEX_IX)
             ->option(Db::OPTION_DROP, true)
-            ->exec(false)
-            ->jsonSerialize();
+            ->toArray();
+        $db->setTableDef($expected);
 
         $actual = $db
             ->reset()
@@ -103,13 +102,14 @@ abstract class DbDefTest extends BaseDbTest {
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
             ->index('col1', Db::INDEX_PK);
-        $def->exec();
+        $db->setTableDef($def->toArray());
 
         $def->table($tbl)
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
             ->index(['col1', 'col2'], Db::INDEX_PK);
-        $def->exec();
+        $db->setTableDef($def->toArray());
+
         $expected = $db->getTableDef($tbl);
 
         $db->reset();
@@ -130,13 +130,14 @@ abstract class DbDefTest extends BaseDbTest {
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
             ->index(['col1', 'col2'], Db::INDEX_PK);
-        $def->exec();
+        $db->setTableDef($def->toArray());
 
         $def->table($tbl)
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
             ->index(['col2', 'col1'], Db::INDEX_PK);
-        $def->exec();
+        $db->setTableDef($def->toArray());
+
         $expected = $db->getTableDef($tbl);
 
         $actual = $db

@@ -157,8 +157,8 @@ abstract class DbTest extends BaseDbTest {
             ->column('userID', 'int')
             ->column('key', 'varchar(50)')
             ->column('value', 'text')
-            ->index(['userID', 'key'], Db::INDEX_PK)
-            ->exec();
+            ->index(['userID', 'key'], Db::INDEX_PK);
+        $db->setTableDef($dbdef->toArray());
 
         $db->insert(
             'userMeta',

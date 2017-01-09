@@ -14,30 +14,25 @@ class DbDef implements \JsonSerializable {
     /// Properties ///
 
     /**
-     * @var Db The database connection to send definitions to.
-     */
-    protected $db;
-
-    /**
      * @var array The columns that need to be set in the table.
      */
-    protected $columns;
+    private $columns;
 
     /**
      * @var array Options to send to the table definitaion call.
      */
-    protected $options;
+    private $options;
 
     /**
      *
      * @var string The name of the currently working table.
      */
-    protected $table;
+    private $table;
 
     /**
      * @var array An array of indexes.
      */
-    protected $indexes;
+    private $indexes;
 
     /// Methods ///
 
@@ -46,8 +41,7 @@ class DbDef implements \JsonSerializable {
      *
      * @param Db $db The database to execute against.
      */
-    public function __construct($db) {
-        $this->db = $db;
+    public function __construct() {
         $this->reset();
     }
 
@@ -151,25 +145,6 @@ class DbDef implements \JsonSerializable {
     }
 
     /**
-     * Execute the table def against the database.
-     *
-     * @param bool $reset Whether or not to reset the db def upon completion.
-     * @return DbDef $this Returns $this for fluent calls.
-     */
-    public function exec($reset = true) {
-        $this->db->setTableDef(
-            $this->jsonSerialize(),
-            $this->options
-        );
-
-        if ($reset) {
-            $this->reset();
-        }
-
-        return $this;
-    }
-
-    /**
      * Set the name of the table.
      *
      * @param string|null $name The name of the table.
@@ -203,7 +178,7 @@ class DbDef implements \JsonSerializable {
                 continue;
             }
 
-            $indexSuffix = self::val('suffix', $index, '');
+            $indexSuffix = empty($index['suffix']) ? '' : $index['suffix'];
 
             if ($type === Db::INDEX_PK ||
                 ($type === Db::INDEX_UNIQUE && $suffix == $indexSuffix) ||
@@ -253,30 +228,19 @@ class DbDef implements \JsonSerializable {
      * which is a value of any type other than a resource.
      */
     public function jsonSerialize() {
+        return $this->toArray();
+    }
+
+    /**
+     * Get the array representation of the table definition.
+     *
+     * @return array Returns a definition array.
+     */
+    public function toArray() {
         return [
             'name' => $this->table,
             'columns' => $this->columns,
             'indexes' => $this->indexes
         ];
-    }
-
-    /**
-     * Get the db connection to send definitions to.
-     *
-     * @return Db Returns the db connection.
-     * @see DbDef::setDb()
-     */
-    public function getDb() {
-        return $this->db;
-    }
-
-    /**
-     * Set the db connection to send definitions to.
-     *
-     * @param Db $db The new database connection.
-     * @see DbDef::getDef()
-     */
-    public function setDb($db) {
-        $this->db = $db;
     }
 }

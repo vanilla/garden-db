@@ -80,18 +80,18 @@ abstract class BaseDbTest extends \PHPUnit_Framework_TestCase {
             $type = $ix['type'] ?: Db::INDEX_IX;
             $isExpected[] = $type.'('.implode(', ', $ix['columns']).')';
         }
-        asort($isExpected);
+        sort($isExpected);
 
         $isActual = [];
         foreach ($ixActual as $ix) {
             $type = $ix['type'] ?: Db::INDEX_IX;
             $isActual[] = $type.'('.implode(', ', $ix['columns']).')';
         }
-        asort($isActual);
 
         if ($subset) {
             $isActual = array_intersect($isActual, $isExpected);
         }
+        sort($isActual);
         $this->assertEquals($isExpected, $isActual, "$tablename indexes are not the same.");
     }
 }
