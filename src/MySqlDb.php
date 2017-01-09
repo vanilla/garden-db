@@ -52,12 +52,12 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    public function dropTable($tablename, array $options = []) {
+    public function dropTable($tableName, array $options = []) {
         $sql = 'drop table '.
             (self::val(Db::OPTION_IGNORE, $options) ? 'if exists ' : '').
-            $this->backtick($this->px.$tablename);
+            $this->backtick($this->px.$tableName);
         $result = $this->query($sql, Db::QUERY_DEFINE);
-        unset($this->tables[strtolower($tablename)]);
+        unset($this->tables[strtolower($tableName)]);
 
         return $result;
     }
@@ -137,28 +137,28 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    public function getTableDef($tablename) {
-        $table = parent::getTableDef($tablename);
+    public function getTableDef($tableName) {
+        $table = parent::getTableDef($tableName);
         if ($table || $table === null) {
             return $table;
         }
 
-        $ltablename = strtolower($tablename);
+        $ltablename = strtolower($tableName);
         $table = self::val($ltablename, $this->tables, []);
         if (!isset($table['columns'])) {
-            $columns = $this->getColumns($tablename);
+            $columns = $this->getColumns($tableName);
             if ($columns === null) {
                 // A table with no columns does not exist.
-                $this->tables[$ltablename] = ['name' => $tablename];
+                $this->tables[$ltablename] = ['name' => $tableName];
                 return null;
             }
 
             $table['columns'] = $columns;
         }
         if (!isset($table['indexes'])) {
-            $table['indexes'] = $this->getIndexes($tablename);
+            $table['indexes'] = $this->getIndexes($tableName);
         }
-        $table['name'] = $tablename;
+        $table['name'] = $tableName;
         $this->tables[$ltablename] = $table;
         return $table;
     }
@@ -166,17 +166,17 @@ class MySqlDb extends Db {
     /**
      * Get the columns for tables and put them in {MySqlDb::$tables}.
      *
-     * @param string $tablename The table to get the columns for or blank for all columns.
+     * @param string $tableName The table to get the columns for or blank for all columns.
      * @return array|null Returns an array of columns if {@link $tablename} is specified, or null otherwise.
      */
-    protected function getColumns($tablename = '') {
-        $ltablename = strtolower($tablename);
+    protected function getColumns($tableName = '') {
+        $ltablename = strtolower($tableName);
         /* @var \PDOStatement $stmt */
         $stmt = $this->get(
             'information_schema.COLUMNS',
             [
                 'TABLE_SCHEMA' => $this->getDbName(),
-                'TABLE_NAME' => $tablename ? $this->px.$tablename : [Db::OP_LIKE => addcslashes($this->px, '_%').'%']
+                'TABLE_NAME' => $tableName ? $this->px.$tableName : [Db::OP_LIKE => addcslashes($this->px, '_%').'%']
             ],
             [
                 'columns' => [
@@ -230,8 +230,8 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    public function get($tablename, array $where, array $options = []) {
-        $sql = $this->buildSelect($tablename, $where, $options);
+    public function get($tableName, array $where, array $options = []) {
+        $sql = $this->buildSelect($tableName, $where, $options);
         $result = $this->query($sql, Db::QUERY_READ, $options);
         return $result;
     }
@@ -239,13 +239,13 @@ class MySqlDb extends Db {
     /**
      * Build a sql select statement.
      *
-     * @param string $table The name of the main table.
+     * @param string $tableName The name of the main table.
      * @param array $where The where filter.
      * @param array $options An array of additional query options.
      * @return string Returns the select statement as a string.
      * @see Db::get()
      */
-    public function buildSelect($table, array $where, array $options = []) {
+    public function buildSelect($tableName, array $where, array $options = []) {
         $sql = '';
 
         // Build the select clause.
@@ -261,9 +261,9 @@ class MySqlDb extends Db {
 
         // Build the from clause.
         if (self::val('escapeTable', $options, true)) {
-            $sql .= "\nfrom ".$this->backtick($this->px.$table);
+            $sql .= "\nfrom ".$this->backtick($this->px.$tableName);
         } else {
-            $sql .= "\nfrom $table";
+            $sql .= "\nfrom $tableName";
         }
 
         // Build the where clause.
@@ -351,14 +351,14 @@ class MySqlDb extends Db {
                             } elseif (is_array($rval)) {
                                 $result .= "$btcolumn in ".$this->bracketList($rval);
                             } else {
-                                $result .= "$btcolumn = ".$this->quoteval($rval, $quotevals);
+                                $result .= "$btcolumn = ".$this->quoteVal($rval, $quotevals);
                             }
                             break;
                         case Db::OP_GT:
                         case Db::OP_GTE:
                         case Db::OP_LT:
                         case Db::OP_LTE:
-                            $result .= "$btcolumn {$map[$vop]} ".$this->quoteval($rval, $quotevals);
+                            $result .= "$btcolumn {$map[$vop]} ".$this->quoteVal($rval, $quotevals);
                             break;
                         case Db::OP_LIKE:
                             $result .= $this->buildLike($btcolumn, $rval, $quotevals);
@@ -374,7 +374,7 @@ class MySqlDb extends Db {
                             } elseif (is_array($rval)) {
                                 $result .= "$btcolumn not in ".$this->bracketList($rval);
                             } else {
-                                $result .= "$btcolumn <> ".$this->quoteval($rval, $quotevals);
+                                $result .= "$btcolumn <> ".$this->quoteVal($rval, $quotevals);
                             }
                             break;
                     }
@@ -388,7 +388,7 @@ class MySqlDb extends Db {
                 if ($value === null) {
                     $result .= "$btcolumn is null";
                 } else {
-                    $result .= "$btcolumn = ".$this->quoteval($value, $quotevals);
+                    $result .= "$btcolumn = ".$this->quoteVal($value, $quotevals);
                 }
             }
         }
@@ -404,7 +404,7 @@ class MySqlDb extends Db {
      * @return string Returns the like expression.
      */
     protected function buildLike($column, $value, $quotevals) {
-        return "$column like ".$this->quoteval($value, $quotevals);
+        return "$column like ".$this->quoteVal($value, $quotevals);
     }
 
     /**
@@ -460,7 +460,7 @@ class MySqlDb extends Db {
      * @param bool $quote Whether or not to quote the value.
      * @return string Returns the value, optionally quoted.
      */
-    public function quoteval($value, $quote = true) {
+    public function quoteVal($value, $quote = true) {
         if ($value instanceof Literal) {
             /* @var Literal $value */
             return $value->getValue('mysql');
@@ -487,7 +487,7 @@ class MySqlDb extends Db {
      * Parse a column type string and return it in a way that is suitible for a create/alter table statement.
      *
      * @param string $typeString The string to parse.
-     * @return string Returns a canonical typestring.
+     * @return string Returns a canonical string.
      */
     protected function columnTypeString($typeString) {
         $type = null;
@@ -536,17 +536,17 @@ class MySqlDb extends Db {
     /**
      * Get the indexes from the database.
      *
-     * @param string $tablename The name of the table to get the indexes for or an empty string to get all indexes.
+     * @param string $tableName The name of the table to get the indexes for or an empty string to get all indexes.
      * @return array|null
      */
-    protected function getIndexes($tablename = '') {
-        $ltablename = strtolower($tablename);
+    protected function getIndexes($tableName = '') {
+        $ltablename = strtolower($tableName);
         /* @var \PDOStatement */
         $stmt = $this->get(
             'information_schema.STATISTICS',
             [
                 'TABLE_SCHEMA' => $this->getDbName(),
-                'TABLE_NAME' => $tablename ? $this->px.$tablename : [Db::OP_LIKE => addcslashes($this->px, '_%').'%']
+                'TABLE_NAME' => $tableName ? $this->px.$tableName : [Db::OP_LIKE => addcslashes($this->px, '_%').'%']
             ],
             [
                 'columns' => [
@@ -600,7 +600,7 @@ class MySqlDb extends Db {
         if ($this->allTablesFetched & Db::FETCH_TABLENAMES) {
             $tablenames = array_keys($this->tables);
         } else {
-            $tablenames = $this->getTablenames();
+            $tablenames = $this->getTableNames();
             $this->tables = [];
             foreach ($tablenames as $tablename) {
                 $this->tables[strtolower($tablename)] = ['name' => $tablename];
@@ -626,7 +626,7 @@ class MySqlDb extends Db {
      *
      * @return array Returns an array of table names with prefixes stripped.
      */
-    protected function getTablenames() {
+    protected function getTableNames() {
         // Get the table names.
         $tables = (array)$this->get(
             'information_schema.TABLES',
@@ -651,8 +651,8 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    public function insert($tablename, array $rows, array $options = []) {
-        $sql = $this->buildInsert($tablename, $rows, true, $options);
+    public function insert($tableName, array $rows, array $options = []) {
+        $sql = $this->buildInsert($tableName, $rows, true, $options);
         $this->query($sql, Db::QUERY_WRITE);
         $id = $this->getPDO()->lastInsertId();
         if (is_numeric($id)) {
@@ -665,15 +665,15 @@ class MySqlDb extends Db {
     /**
      * Build an insert statement.
      *
-     * @param string $tablename The name of the table to insert to.
+     * @param string $tableName The name of the table to insert to.
      * @param array $row The row to insert.
-     * @param bool $quotevals Whether or not to quote the values.
+     * @param bool $quoteVals Whether or not to quote the values.
      * @param array $options An array of options for the insert. See {@link Db::insert} for the options.
      * @return string Returns the the sql string of the insert statement.
      */
-    protected function buildInsert($tablename, array $row, $quotevals = true, $options = []) {
+    protected function buildInsert($tableName, array $row, $quoteVals = true, $options = []) {
         if (self::val(Db::OPTION_UPSERT, $options)) {
-            return $this->buildUpsert($tablename, $row, $quotevals, $options);
+            return $this->buildUpsert($tableName, $row, $quoteVals, $options);
         } elseif (self::val(Db::OPTION_IGNORE, $options)) {
             $sql = 'insert ignore ';
         } elseif (self::val(Db::OPTION_REPLACE, $options)) {
@@ -681,12 +681,12 @@ class MySqlDb extends Db {
         } else {
             $sql = 'insert ';
         }
-        $sql .= $this->backtick($this->px.$tablename);
+        $sql .= $this->backtick($this->px.$tableName);
 
         // Add the list of values.
         $sql .=
             "\n".$this->bracketList(array_keys($row), '`').
-            "\nvalues".$this->bracketList($row, $quotevals ? "'" : '');
+            "\nvalues".$this->bracketList($row, $quoteVals ? "'" : '');
 
         return $sql;
     }
@@ -696,16 +696,16 @@ class MySqlDb extends Db {
      *
      * An upsert statement is an insert on duplicate key statement in MySQL.
      *
-     * @param string $tablename The name of the table to update.
+     * @param string $tableName The name of the table to update.
      * @param array $row The row to insert or update.
-     * @param bool $quotevals Whether or not to quote the values in the row.
+     * @param bool $quoteVals Whether or not to quote the values in the row.
      * @param array $options An array of additional query options.
      * @return string Returns the upsert statement as a string.
      */
-    protected function buildUpsert($tablename, array $row, $quotevals = true, $options = []) {
+    protected function buildUpsert($tableName, array $row, $quoteVals = true, $options = []) {
         // Build the initial insert statement first.
         unset($options[Db::OPTION_UPSERT]);
-        $sql = $this->buildInsert($tablename, $row, $quotevals, $options);
+        $sql = $this->buildInsert($tableName, $row, $quoteVals, $options);
 
         // Add the duplicate key stuff.
         $updates = [];
@@ -720,7 +720,7 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    public function load($tablename, $rows, array $options = []) {
+    public function load($tableName, $rows, array $options = []) {
         $count = 0;
         $first = true;
         $spec = [];
@@ -734,7 +734,7 @@ class MySqlDb extends Db {
                     $spec[$key] = $this->paramName($key);
                 }
 
-                $sql = $this->buildInsert($tablename, $spec, false, $options);
+                $sql = $this->buildInsert($tableName, $spec, false, $options);
                 $stmt = $this->getPDO()->prepare($sql);
                 $first = false;
             }
@@ -763,8 +763,8 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    public function update($tablename, array $set, array $where, array $options = []) {
-        $sql = $this->buildUpdate($tablename, $set, $where, true, $options);
+    public function update($tableName, array $set, array $where, array $options = []) {
+        $sql = $this->buildUpdate($tableName, $set, $where, true, $options);
         $result = $this->query($sql, Db::QUERY_WRITE);
 
         if ($result instanceof \PDOStatement) {
@@ -777,27 +777,27 @@ class MySqlDb extends Db {
     /**
      * Build a sql update statement.
      *
-     * @param string $tablename The name of the table to update.
+     * @param string $tableName The name of the table to update.
      * @param array $set An array of columns to set.
      * @param array $where The where filter.
-     * @param bool $quotevals Whether or not to quote the values.
+     * @param bool $quoteVals Whether or not to quote the values.
      * @param array $options Additional options for the query.
      * @return string Returns the update statement as a string.
      */
-    protected function buildUpdate($tablename, array $set, array $where, $quotevals = true, array $options = []) {
+    protected function buildUpdate($tableName, array $set, array $where, $quoteVals = true, array $options = []) {
         $sql = 'update '.
             (self::val(Db::OPTION_IGNORE, $options) ? 'ignore ' : '').
-            $this->backtick($this->px.$tablename).
+            $this->backtick($this->px.$tableName).
             "\nset\n  ";
 
         $parts = [];
         foreach ($set as $key => $value) {
-            $parts[] = $this->backtick($key).' = '.$this->quoteval($value, $quotevals);
+            $parts[] = $this->backtick($key).' = '.$this->quoteVal($value, $quoteVals);
         }
         $sql .= implode(",\n  ", $parts);
 
         if (!empty($where)) {
-            $sql .= "\nwhere ".$this->buildWhere($where, Db::OP_AND, $quotevals);
+            $sql .= "\nwhere ".$this->buildWhere($where, Db::OP_AND, $quoteVals);
         }
 
         return $sql;
@@ -806,14 +806,14 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    public function delete($tablename, array $where, array $options = []) {
+    public function delete($tableName, array $where, array $options = []) {
         if (self::val(Db::OPTION_TRUNCATE, $options)) {
             if (!empty($where)) {
-                throw new \InvalidArgumentException("You cannot truncate $tablename with a where filter.", 500);
+                throw new \InvalidArgumentException("You cannot truncate $tableName with a where filter.", 500);
             }
-            $sql = 'truncate table '.$this->backtick($this->px.$tablename);
+            $sql = 'truncate table '.$this->backtick($this->px.$tableName);
         } else {
-            $sql = 'delete from '.$this->backtick($this->px.$tablename);
+            $sql = 'delete from '.$this->backtick($this->px.$tableName);
 
             if (!empty($where)) {
                 $sql .= "\nwhere ".$this->buildWhere($where);
@@ -868,7 +868,7 @@ class MySqlDb extends Db {
         }
 
         if (isset($def['default'])) {
-            $result .= ' default '.$this->quoteval($def['default']);
+            $result .= ' default '.$this->quoteVal($def['default']);
         }
 
         if (self::val('autoincrement', $def)) {
@@ -881,7 +881,7 @@ class MySqlDb extends Db {
     /**
      * Return the SDL string that defines an index.
      *
-     * @param string $tablename The name of the table that the index is on.
+     * @param string $tableName The name of the table that the index is on.
      * @param array $def The index defintion. This definition should have the following keys.
      *
      * columns
@@ -890,8 +890,8 @@ class MySqlDb extends Db {
      * : One of "index", "unique", or "primary".
      * @return null|string Returns the index string or null if the index is not correct.
      */
-    protected function indexDefString($tablename, array $def) {
-        $indexName = $this->backtick($this->buildIndexName($tablename, $def));
+    protected function indexDefString($tableName, array $def) {
+        $indexName = $this->backtick($this->buildIndexName($tableName, $def));
         switch (self::val('type', $def, Db::INDEX_IX)) {
             case Db::INDEX_IX:
                 return "index $indexName ".$this->bracketList($def['columns'], '`');
@@ -981,7 +981,7 @@ class MySqlDb extends Db {
             return force_int($value);
         } elseif (in_array($type, ['real', 'double', 'double precision', 'float',
             'numeric', 'decimal(10,5)'])) {
-            return floatself::val($value);
+            return floatval($value);
         } else {
             return (string)$value;
         }

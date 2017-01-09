@@ -103,19 +103,19 @@ abstract class Db {
     /**
      * Drop a table.
      *
-     * @param string $tablename The name of the table to drop.
+     * @param string $tableName The name of the table to drop.
      * @param array $options An array of additional options when adding the table.
      */
-    abstract public function dropTable($tablename, array $options = []);
+    abstract public function dropTable($tableName, array $options = []);
 
     /**
      * Get a table definition.
      *
-     * @param string $tablename The name of the table.
+     * @param string $tableName The name of the table.
      * @return array|null Returns the table definition or null if the table does not exist.
      */
-    public function getTableDef($tablename) {
-        $ltablename = strtolower($tablename);
+    public function getTableDef($tableName) {
+        $ltablename = strtolower($tableName);
 
         // Check to see if the table isn't in the cache first.
         if ($this->allTablesFetched & Db::FETCH_TABLENAMES &&
@@ -157,21 +157,21 @@ abstract class Db {
      * @param array $options An array of additional options when adding the table.
      */
     public function setTableDef(array $tableDef, array $options = []) {
-        $tablename = $tableDef['name'];
-        $ltablename = strtolower($tablename);
-        $tableDef['name'] = $tablename;
+        $tableName = $tableDef['name'];
+        $lTableName = strtolower($tableName);
+        $tableDef['name'] = $tableName;
         $drop = self::val(Db::OPTION_DROP, $options, false);
-        $curTable = $this->getTableDef($tablename);
+        $curTable = $this->getTableDef($tableName);
 
-        $this->fixIndexes($tablename, $tableDef, $curTable);
+        $this->fixIndexes($tableName, $tableDef, $curTable);
 
         if (!$curTable) {
             $this->createTable($tableDef, $options);
-            $this->tables[$ltablename] = $tableDef;
+            $this->tables[$lTableName] = $tableDef;
             return;
         }
         // This is the alter statement.
-        $alterDef = ['name' => $tablename];
+        $alterDef = ['name' => $tableName];
 
         // Figure out the columns that have changed.
         $curColumns = (array)self::val('columns', $curTable, []);
@@ -221,20 +221,20 @@ abstract class Db {
         $this->alterTable($alterDef, $options);
 
         // Update the cached schema.
-        $tableDef['name'] = $tablename;
-        $this->tables[$ltablename] = $tableDef;
+        $tableDef['name'] = $tableName;
+        $this->tables[$lTableName] = $tableDef;
     }
 
     /**
      * Move the primary key index into the correct place for database drivers.
      *
-     * @param string $tablename The name of the table.
+     * @param string $tableName The name of the table.
      * @param array &$tableDef The table definition.
      * @param array|null $curTableDef The current database table def used to resolve conflicts in some names.
      * @throws \Exception Throws an exception when there is a mismatch between the primary index and the primary key
      * defined on the columns themselves.
      */
-    protected function fixIndexes($tablename, array &$tableDef, $curTableDef = null) {
+    protected function fixIndexes($tableName, array &$tableDef, $curTableDef = null) {
         // Loop through the columns and add get the primary key index.
         $primaryColumns = [];
         foreach ($tableDef['columns'] as $cname => $cdef) {
@@ -247,7 +247,7 @@ abstract class Db {
         $primaryFound = false;
         array_touch('indexes', $tableDef, []);
         foreach ($tableDef['indexes'] as &$indexDef) {
-            array_touch('name', $indexDef, $this->buildIndexName($tablename, $indexDef));
+            array_touch('name', $indexDef, $this->buildIndexName($tableName, $indexDef));
 
             if (self::val('type', $indexDef) === Db::INDEX_PK) {
                 $primaryFound = true;
@@ -314,33 +314,33 @@ abstract class Db {
     /**
      * Get data from the database.
      *
-     * @param string $tablename The name of the table to get the data from.
+     * @param string $tableName The name of the table to get the data from.
      * @param array $where An array of where conditions.
      * @param array $options An array of additional options.
      * @return mixed Returns the result set.
      */
-    abstract public function get($tablename, array $where, array $options = []);
+    abstract public function get($tableName, array $where, array $options = []);
 
     /**
      * Get a single row from the database.
      *
      * This is a conveinience method that calls {@link Db::get()} and shifts off the first row.
      *
-     * @param string $tablename The name of the table to get the data from.
+     * @param string $tableName The name of the table to get the data from.
      * @param array $where An array of where conditions.
      * @param array $options An array of additional options.
      * @return array|false Returns the row or false if there is no row.
      */
-    public function getOne($tablename, array $where, array $options = []) {
+    public function getOne($tableName, array $where, array $options = []) {
         $options['limit'] = 1;
-        $rows = $this->get($tablename, $where, $options);
+        $rows = $this->get($tableName, $where, $options);
         return array_shift($rows);
     }
 
     /**
      * Insert a row into a table.
      *
-     * @param string $tablename The name of the table to insert into.
+     * @param string $tableName The name of the table to insert into.
      * @param array $row The row of data to insert.
      * @param array $options An array of options for the insert.
      *
@@ -354,12 +354,12 @@ abstract class Db {
      * @return mixed Should return the id of the inserted record.
      * @see Db::load()
      */
-    abstract public function insert($tablename, array $row, array $options = []);
+    abstract public function insert($tableName, array $row, array $options = []);
 
     /**
      * Load many rows into a table.
      *
-     * @param string $tablename The name of the table to insert into.
+     * @param string $tableName The name of the table to insert into.
      * @param \Traversable|array $rows A dataset to insert.
      * Note that all rows must contain the same columns.
      * The first row will be looked at for the structure of the insert and the rest of the rows will use this structure.
@@ -367,24 +367,24 @@ abstract class Db {
      * @return mixed
      * @see Db::insert()
      */
-    abstract public function load($tablename, $rows, array $options = []);
+    abstract public function load($tableName, $rows, array $options = []);
 
 
     /**
      * Update a row or rows in a table.
      *
-     * @param string $tablename The name of the table to update.
+     * @param string $tableName The name of the table to update.
      * @param array $set The values to set.
      * @param array $where The where filter for the update.
      * @param array $options An array of options for the update.
      * @return mixed
      */
-    abstract public function update($tablename, array $set, array $where, array $options = []);
+    abstract public function update($tableName, array $set, array $where, array $options = []);
 
     /**
      * Delete rows from a table.
      *
-     * @param string $tablename The name of the table to delete from.
+     * @param string $tableName The name of the table to delete from.
      * @param array $where The where filter of the delete.
      * @param array $options An array of options.
      *
@@ -392,7 +392,7 @@ abstract class Db {
      * : Truncate the table instead of deleting rows. In this case {@link $where} must be blank.
      * @return mixed
      */
-    abstract public function delete($tablename, array $where, array $options = []);
+    abstract public function delete($tableName, array $where, array $options = []);
 
     /**
      * Reset the internal table definition cache.
@@ -409,11 +409,11 @@ abstract class Db {
     /**
      * Build a standardized index name from an index definition.
      *
-     * @param string $tablename The name of the table the index is in.
+     * @param string $tableName The name of the table the index is in.
      * @param array $indexDef The index definition.
      * @return string Returns the index name.
      */
-    protected function buildIndexName($tablename, array $indexDef) {
+    protected function buildIndexName($tableName, array $indexDef) {
         $type = self::val('type', $indexDef, Db::INDEX_IX);
 
         if ($type === Db::INDEX_PK) {
@@ -421,7 +421,7 @@ abstract class Db {
         }
         $px = self::val($type, [Db::INDEX_IX => 'ix_', Db::INDEX_UNIQUE => 'ux_'], 'ix_');
         $sx = self::val('suffix', $indexDef);
-        $result = $px.$tablename.'_'.($sx ?: implode('', $indexDef['columns']));
+        $result = $px.$tableName.'_'.($sx ?: implode('', $indexDef['columns']));
         return $result;
     }
 

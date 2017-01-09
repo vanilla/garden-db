@@ -111,7 +111,7 @@ class SqliteDb extends MySqlDb {
     /**
      * {@inheritdoc}
      */
-    protected function buildInsert($tablename, array $row, $quotevals = true, $options = []) {
+    protected function buildInsert($tableName, array $row, $quoteVals = true, $options = []) {
         if (self::val(Db::OPTION_UPSERT, $options)) {
             throw new \Exception("Upsert is not supported.");
         } elseif (self::val(Db::OPTION_IGNORE, $options)) {
@@ -121,12 +121,12 @@ class SqliteDb extends MySqlDb {
         } else {
             $sql = 'insert into ';
         }
-        $sql .= $this->backtick($this->px.$tablename);
+        $sql .= $this->backtick($this->px.$tableName);
 
         // Add the list of values.
         $sql .=
             "\n".$this->bracketList(array_keys($row), '`').
-            "\nvalues".$this->bracketList($row, $quotevals ? "'" : '');
+            "\nvalues".$this->bracketList($row, $quoteVals ? "'" : '');
 
         return $sql;
     }
@@ -141,20 +141,20 @@ class SqliteDb extends MySqlDb {
     /**
      * {@inheritdoc}
      */
-    protected function buildUpdate($tablename, array $set, array $where, $quotevals = true, array $options = []) {
+    protected function buildUpdate($tableName, array $set, array $where, $quoteVals = true, array $options = []) {
         $sql = 'update '.
             (self::val(Db::OPTION_IGNORE, $options) ? 'or ignore ' : '').
-            $this->backtick($this->px.$tablename).
+            $this->backtick($this->px.$tableName).
             "\nset\n  ";
 
         $parts = [];
         foreach ($set as $key => $value) {
-            $parts[] = $this->backtick($key).' = '.$this->quoteVal($value, $quotevals);
+            $parts[] = $this->backtick($key).' = '.$this->quoteVal($value, $quoteVals);
         }
         $sql .= implode(",\n  ", $parts);
 
         if (!empty($where)) {
-            $sql .= "\nwhere ".$this->buildWhere($where, Db::OP_AND, $quotevals);
+            $sql .= "\nwhere ".$this->buildWhere($where, Db::OP_AND, $quoteVals);
         }
 
         return $sql;
@@ -278,18 +278,18 @@ class SqliteDb extends MySqlDb {
     /**
      * Get the columns for tables and put them in {MySqlDb::$tables}.
      *
-     * @param string $tablename The table to get the columns for or blank for all columns.
+     * @param string $tableName The table to get the columns for or blank for all columns.
      * @return array|null Returns an array of columns if {@link $tablename} is specified, or null otherwise.
      */
-    protected function getColumns($tablename = '') {
-        if (!$tablename) {
-            $tablenames = $this->getTablenames();
-            foreach ($tablenames as $tablename) {
-                $this->getColumns($tablename);
+    protected function getColumns($tableName = '') {
+        if (!$tableName) {
+            $tablenames = $this->getTableNames();
+            foreach ($tablenames as $tableName) {
+                $this->getColumns($tableName);
             }
         }
 
-        $cdefs = (array)$this->query('pragma table_info('.$this->quoteVal($this->px.$tablename).')');
+        $cdefs = (array)$this->query('pragma table_info('.$this->quoteVal($this->px.$tableName).')');
         if (empty($cdefs)) {
             return null;
         }
@@ -321,34 +321,34 @@ class SqliteDb extends MySqlDb {
                 'type' => Db::INDEX_PK
             ];
         }
-        $this->tables[$tablename] = $tdef;
+        $this->tables[$tableName] = $tdef;
         return $columns;
     }
 
     /**
      * Get the indexes from the database.
      *
-     * @param string $tablename The name of the table to get the indexes for or an empty string to get all indexes.
+     * @param string $tableName The name of the table to get the indexes for or an empty string to get all indexes.
      * @return array|null
      */
-    protected function getIndexes($tablename = '') {
-        if (!$tablename) {
-            $tablenames = $this->getTablenames();
-            foreach ($tablenames as $tablename) {
-                $this->getIndexes($tablename);
+    protected function getIndexes($tableName = '') {
+        if (!$tableName) {
+            $tablenames = $this->getTableNames();
+            foreach ($tablenames as $tableName) {
+                $this->getIndexes($tableName);
             }
         }
 
-        $pk = valr(['indexes', Db::INDEX_PK], $this->tables[$tablename]);
+        $pk = valr(['indexes', Db::INDEX_PK], $this->tables[$tableName]);
 
         // Reset the index list for the table.
-        $this->tables[$tablename]['indexes'] = [];
+        $this->tables[$tableName]['indexes'] = [];
 
         if ($pk) {
-            $this->tables[$tablename]['indexes'][Db::INDEX_PK] = $pk;
+            $this->tables[$tableName]['indexes'][Db::INDEX_PK] = $pk;
         }
 
-        $indexInfos = (array)$this->query('pragma index_list('.$this->quoteVal($this->px.$tablename).')');
+        $indexInfos = (array)$this->query('pragma index_list('.$this->quoteVal($this->px.$tableName).')');
         foreach ($indexInfos as $row) {
             $indexName = $row['name'];
             if ($row['unique']) {
@@ -365,10 +365,10 @@ class SqliteDb extends MySqlDb {
                 'columns' => array_column($columns, 'name'),
                 'type' => $type
             ];
-            $this->tables[$tablename]['indexes'][] = $index;
+            $this->tables[$tableName]['indexes'][] = $index;
         }
 
-        return $this->tables[$tablename]['indexes'];
+        return $this->tables[$tableName]['indexes'];
     }
 
     /**
@@ -401,7 +401,7 @@ class SqliteDb extends MySqlDb {
      *
      * @return array Returns an array of table names with prefixes stripped.
      */
-    protected function getTablenames() {
+    protected function getTableNames() {
         // Get the table names.
         $tables = (array)$this->get(
             'sqlite_master',
@@ -426,18 +426,18 @@ class SqliteDb extends MySqlDb {
     /**
      * {@inheritdoc}
      */
-    public function insert($tablename, array $rows, array $options = []) {
+    public function insert($tableName, array $rows, array $options = []) {
         // Sqlite doesn't support upsert so do upserts manually.
         if (self::val(Db::OPTION_UPSERT, $options)) {
             unset($options[Db::OPTION_UPSERT]);
 
-            $keys = $this->getPKValue($tablename, $rows, true);
+            $keys = $this->getPKValue($tableName, $rows, true);
             if (!$keys) {
                 throw new \Exception("Cannot upsert with no key.", 500);
             }
             // Try updating first.
             $updated = $this->update(
-                $tablename,
+                $tableName,
                 array_diff_key($rows, $keys),
                 $keys,
                 $options
@@ -452,7 +452,7 @@ class SqliteDb extends MySqlDb {
             }
         }
 
-        $result = parent::insert($tablename, $rows, $options);
+        $result = parent::insert($tableName, $rows, $options);
         return $result;
     }
 
