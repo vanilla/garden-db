@@ -11,6 +11,9 @@
 	"require": {
 		"php": ">=5.4.0"
 	},
+	"require-dev": {
+		"bobthecow/faker": "dev-master"
+	},
 	"autoload": {
 		"psr-4": {
 			"Garden\\Db\\": "src"
