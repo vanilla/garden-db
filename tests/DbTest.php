@@ -288,14 +288,14 @@ abstract class DbTest extends BaseDbTest {
             '<' => [['id' => [Db::OP_LT => 3]], [1, 2]],
             '<=' => [['id' => [Db::OP_LTE => 3]], [1, 2, 3]],
             '=' => [['id' => [Db::OP_EQ => 2]], [2]],
-            '<>' => [['id' => [Db::OP_NE => 3]], [1, 2, 4, 5]],
+            '<>' => [['id' => [Db::OP_NEQ => 3]], [1, 2, 4, 5]],
             'is null' => [['id' => null], [null]],
-            'is not null' => [['id' => [Db::OP_NE => null]], [1, 2, 3, 4, 5]],
+            'is not null' => [['id' => [Db::OP_NEQ => null]], [1, 2, 3, 4, 5]],
             'all' => [[], [null, 1, 2, 3, 4, 5]],
             'in' => [['id' => [Db::OP_IN => [3, 4, 5]]], [3, 4, 5]],
             'in (short)' => [['id' => [3, 4, 5]], [3, 4, 5]],
             '= in' => [['id' => [Db::OP_EQ => [3, 4, 5]]], [3, 4, 5]],
-            '<> in' => [['id' => [Db::OP_NE => [3, 4, 5]]], [1, 2]],
+            '<> in' => [['id' => [Db::OP_NEQ => [3, 4, 5]]], [1, 2]],
             'and' =>[['id' => [
                 Db::OP_AND => [
                     Db::OP_GT => 3,

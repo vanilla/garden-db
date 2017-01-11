@@ -368,7 +368,7 @@ class MySqlDb extends Db {
                             $rval = array_map(array($this->pdo, 'quote'), (array)$rval);
                             $result .= "$btcolumn in (".implode(', ', $rval).')';
                             break;
-                        case Db::OP_NE:
+                        case Db::OP_NEQ:
                             if ($rval === null) {
                                 $result .= "$btcolumn is not null";
                             } elseif (is_array($rval)) {
@@ -965,7 +965,7 @@ class MySqlDb extends Db {
     }
 
     /**
-     * Force a value into the appropriate php type based on its Sqlite type.
+     * Force a value into the appropriate php type based on its SQL type.
      *
      * @param mixed $value The value to force.
      * @param string $type The sqlite type name.

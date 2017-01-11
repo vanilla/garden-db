@@ -35,7 +35,7 @@ abstract class Db {
     const OP_LIKE = '$like';
     const OP_LT = '<';
     const OP_LTE = '<=';
-    const OP_NE = '<>';
+    const OP_NEQ = '<>';
 
     const OP_AND = '$and';
     const OP_OR = '$or';

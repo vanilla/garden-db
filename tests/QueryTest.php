@@ -106,14 +106,14 @@ class QueryTest extends \PHPUnit_Framework_TestCase {
         $qry = new Query();
 
         $qry->addWhere('foo', 'bar')
-            ->addWhere('foo', [Db::OP_NE => 'baz'])
-            ->addWhere('bar', [Db::OP_NE => 'bam'])
+            ->addWhere('foo', [Db::OP_NEQ => 'baz'])
+            ->addWhere('bar', [Db::OP_NEQ => 'bam'])
             ->addWhere('bar', 'qux');
 
         $this->assertEquals(
             [
-                'foo' => [Db::OP_EQ => 'bar', Db::OP_NE => 'baz'],
-                'bar' => [Db::OP_NE => 'bam', Db::OP_EQ => 'qux']
+                'foo' => [Db::OP_EQ => 'bar', Db::OP_NEQ => 'baz'],
+                'bar' => [Db::OP_NEQ => 'bam', Db::OP_EQ => 'qux']
             ],
             $qry->toArray()['where']
         );
