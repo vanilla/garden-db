@@ -16,12 +16,13 @@
 	},
 	"autoload": {
 		"psr-4": {
+			"Garden\\": "garden",
 			"Garden\\Db\\": "src"
 		}
 	},
 	"autoload-dev": {
 		"psr-4": {
-			"Garden\\Db\\Tests\\": "tests"
+			"Garden\\Tests\\Db\\": "tests"
 		}
 	}
 }

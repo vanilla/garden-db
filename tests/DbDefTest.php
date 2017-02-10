@@ -27,7 +27,7 @@ abstract class DbDefTest extends BaseDbTest {
             ->index('name', Db::INDEX_IX)
             ->toArray();
 
-        $db->setTableDef($def->toArray());
+        $db->defineTable($def->toArray());
         $def2 = $db->getTableDef('user');
 
         $this->assertDefEquals('user', $def1, $def2);
@@ -53,7 +53,7 @@ abstract class DbDefTest extends BaseDbTest {
             ->index('col1', Db::INDEX_IX)
             ->toArray();
 
-        $db->setTableDef($expected);
+        $db->defineTable($expected);
         $db->reset();
         $actual = $db->getTableDef($tbl);
 
@@ -72,7 +72,7 @@ abstract class DbDefTest extends BaseDbTest {
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
             ->index('col1', Db::INDEX_IX);
-        $db->setTableDef($def->toArray());
+        $db->defineTable($def->toArray());
 
         $expected = $def->table($tbl)
             ->column('cola', 'int')
@@ -80,7 +80,7 @@ abstract class DbDefTest extends BaseDbTest {
             ->column('col2', 'int')
             ->index('col2', Db::INDEX_IX)
             ->toArray();
-        $db->setTableDef($expected, [Db::OPTION_DROP => true]);
+        $db->defineTable($expected, [Db::OPTION_DROP => true]);
 
         $actual = $db
             ->reset()
@@ -101,13 +101,13 @@ abstract class DbDefTest extends BaseDbTest {
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
             ->index('col1', Db::INDEX_PK);
-        $db->setTableDef($def->toArray());
+        $db->defineTable($def->toArray());
 
         $def->table($tbl)
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
             ->index(['col1', 'col2'], Db::INDEX_PK);
-        $db->setTableDef($def->toArray());
+        $db->defineTable($def->toArray());
 
         $expected = $db->getTableDef($tbl);
 
@@ -129,13 +129,13 @@ abstract class DbDefTest extends BaseDbTest {
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
             ->index(['col1', 'col2'], Db::INDEX_PK);
-        $db->setTableDef($def->toArray());
+        $db->defineTable($def->toArray());
 
         $def->table($tbl)
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
             ->index(['col2', 'col1'], Db::INDEX_PK);
-        $db->setTableDef($def->toArray());
+        $db->defineTable($def->toArray());
 
         $expected = $db->getTableDef($tbl);
 

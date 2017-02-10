@@ -9,6 +9,7 @@ namespace Garden\Tests\Db;
 
 use Garden\Db\Db;
 use Garden\Db\SqliteDb;
+use PDO;
 
 /**
  * Exectute the {@link DbTest} tests against the {@link SqliteDb}.
@@ -25,8 +26,9 @@ class SqliteDbTest extends DbTest {
         } else {
             $path = __DIR__.'/cache/dbtest.sqlite';
         }
+        $pdo = new PDO("sqlite:$path", null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 
-        $db = new SqliteDb(new \PDO("sqlite:$path"));
+        $db = new SqliteDb($pdo);
 
         return $db;
     }

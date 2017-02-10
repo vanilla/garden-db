@@ -105,7 +105,10 @@ class MySqlDb extends Db {
      * : Returns the number of rows affected when performing an update or an insert.
      */
     public function query($sql, $type = Db::QUERY_READ, $options = []) {
-        $mode = self::val(Db::OPTION_MODE, $options, $this->mode);
+        $options += [
+            Db::OPTION_MODE => $this->mode
+        ];
+        $mode = $options[Db::OPTION_MODE];
 
         if ($mode & Db::MODE_ECHO) {
             echo trim($sql, "\n;").";\n\n";
@@ -327,56 +330,74 @@ class MySqlDb extends Db {
             $btcolumn = $this->backtick($column);
 
             if (is_array($value)) {
-                if (isset($value[0])) {
-                    // This is a short in syntax.
-                    $value = [Db::OP_IN => $value];
-                }
-
-                foreach ($value as $vop => $rval) {
-                    if ($result) {
-                        $result .= "\n  $strop ";
+                if (is_numeric($column)) {
+                    // This is a bracketed expression.
+                    $result .= (empty($result) ? '' : "\n  $strop ").
+                        "(\n  ".
+                        $this->buildWhere($value, $op, $quotevals).
+                        "\n  )";
+                } elseif (in_array($column, [Db::OP_AND, Db::OP_OR])) {
+                    // This is an AND/OR expression.
+                    $result .= (empty($result) ? '' : "\n  $strop ").
+                        "(\n  ".
+                        $this->buildWhere($value, $column, $quotevals).
+                        "\n  )";
+                } else {
+                    if (isset($value[0])) {
+                        // This is a short in syntax.
+                        $value = [Db::OP_IN => $value];
                     }
 
-                    switch ($vop) {
-                        case Db::OP_AND:
-                        case Db::OP_OR:
-                            $innerWhere = [$column => $rval];
-                            $result .= "(\n  ".
-                                $this->buildWhere($innerWhere, $vop, $quotevals).
-                                "\n  )";
-                            break;
-                        case Db::OP_EQ:
-                            if ($rval === null) {
-                                $result .= "$btcolumn is null";
-                            } elseif (is_array($rval)) {
-                                $result .= "$btcolumn in ".$this->bracketList($rval);
-                            } else {
-                                $result .= "$btcolumn = ".$this->quoteVal($rval, $quotevals);
-                            }
-                            break;
-                        case Db::OP_GT:
-                        case Db::OP_GTE:
-                        case Db::OP_LT:
-                        case Db::OP_LTE:
-                            $result .= "$btcolumn {$map[$vop]} ".$this->quoteVal($rval, $quotevals);
-                            break;
-                        case Db::OP_LIKE:
-                            $result .= $this->buildLike($btcolumn, $rval, $quotevals);
-                            break;
-                        case Db::OP_IN:
-                            // Quote the in values.
-                            $rval = array_map(array($this->pdo, 'quote'), (array)$rval);
-                            $result .= "$btcolumn in (".implode(', ', $rval).')';
-                            break;
-                        case Db::OP_NEQ:
-                            if ($rval === null) {
-                                $result .= "$btcolumn is not null";
-                            } elseif (is_array($rval)) {
-                                $result .= "$btcolumn not in ".$this->bracketList($rval);
-                            } else {
-                                $result .= "$btcolumn <> ".$this->quoteVal($rval, $quotevals);
-                            }
-                            break;
+                    foreach ($value as $vop => $rval) {
+                        if ($result) {
+                            $result .= "\n  $strop ";
+                        }
+
+                        switch ($vop) {
+                            case Db::OP_AND:
+                            case Db::OP_OR:
+                                if (is_numeric($column)) {
+                                    $innerWhere = $rval;
+                                } else {
+                                    $innerWhere = [$column => $rval];
+                                }
+                                $result .= "(\n  ".
+                                    $this->buildWhere($innerWhere, $vop, $quotevals).
+                                    "\n  )";
+                                break;
+                            case Db::OP_EQ:
+                                if ($rval === null) {
+                                    $result .= "$btcolumn is null";
+                                } elseif (is_array($rval)) {
+                                    $result .= "$btcolumn in ".$this->bracketList($rval);
+                                } else {
+                                    $result .= "$btcolumn = ".$this->quoteVal($rval, $quotevals);
+                                }
+                                break;
+                            case Db::OP_GT:
+                            case Db::OP_GTE:
+                            case Db::OP_LT:
+                            case Db::OP_LTE:
+                                $result .= "$btcolumn {$map[$vop]} ".$this->quoteVal($rval, $quotevals);
+                                break;
+                            case Db::OP_LIKE:
+                                $result .= $this->buildLike($btcolumn, $rval, $quotevals);
+                                break;
+                            case Db::OP_IN:
+                                // Quote the in values.
+                                $rval = array_map(array($this->pdo, 'quote'), (array)$rval);
+                                $result .= "$btcolumn in (".implode(', ', $rval).')';
+                                break;
+                            case Db::OP_NEQ:
+                                if ($rval === null) {
+                                    $result .= "$btcolumn is not null";
+                                } elseif (is_array($rval)) {
+                                    $result .= "$btcolumn not in ".$this->bracketList($rval);
+                                } else {
+                                    $result .= "$btcolumn <> ".$this->quoteVal($rval, $quotevals);
+                                }
+                                break;
+                        }
                     }
                 }
             } else {

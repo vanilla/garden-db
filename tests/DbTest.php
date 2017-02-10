@@ -8,6 +8,7 @@
 namespace Garden\Tests\Db;
 
 use Garden\Db\Db;
+use Garden\Db\Query;
 use Garden\Db\TableDef;
 
 /**
@@ -51,7 +52,7 @@ abstract class DbTest extends BaseDbTest {
             ]
         ];
 
-        self::$db->setTableDef($tableDef);
+        self::$db->defineTable($tableDef);
     }
 
     /**
@@ -158,7 +159,7 @@ abstract class DbTest extends BaseDbTest {
             ->column('key', 'varchar(50)')
             ->column('value', 'text')
             ->index(['userID', 'key'], Db::INDEX_PK);
-        $db->setTableDef($dbdef->toArray());
+        $db->defineTable($dbdef->toArray());
 
         $db->insert(
             'userMeta',
@@ -250,7 +251,7 @@ abstract class DbTest extends BaseDbTest {
         $db = self::$db;
 
         // Create a table for the test.
-        $db->setTableDef(
+        $db->defineTable(
             [
                 'name' => 'tuple',
                 'columns' => [
@@ -345,6 +346,64 @@ abstract class DbTest extends BaseDbTest {
 
         $tablenames = $db->getAllTables();
         $tabledefs = $db->getAllTables(true);
+    }
+
+    /**
+     * Create and populate a simple test table for various queries.
+     */
+    public function testComments() {
+        $db = self::$db;
+
+        $def = new TableDef('comment');
+        $def->column('id', 'int')
+            ->column('parentID', 'int')
+            ->column('count', 'int', 0)
+            ->index('id', Db::INDEX_PK);
+        $db->defineTable($def->toArray());
+
+        $rows = [
+            ['id' => 1, 'parentID' => 1, 'count' => 0],
+            ['id' => 2, 'parentID' => 1, 'count' => 1],
+            ['id' => 3, 'parentID' => 2, 'count' => 0],
+            ['id' => 4, 'parentID' => 2, 'count' => 1]
+        ];
+        $db->load('comment', $rows);
+
+        $dbRows = $db->get('comment', []);
+        $this->assertEquals($rows, $dbRows);
+    }
+
+    /**
+     * Test a group of AND expressions.
+     *
+     * @sdepends testComments
+     */
+    public function testAndGroup() {
+        $qry = new Query('comment');
+        $qry->addWhere('parentID', 1)
+            ->beginAnd()
+            ->addWhere('count', 0)
+            ->end();
+
+        $rows = $qry->exec(self::$db);
+
+        $this->assertEquals([1], array_column($rows, 'id'));
+    }
+
+    /**
+     * Test a group of OR expressions
+     *
+     * @depends testComments
+     */
+    public function testOrGroup() {
+        $qry = new Query('comment');
+        $qry->beginOr()
+            ->addWhere('parentID', 1)
+            ->addWhere('count', 0)
+            ->end();
+
+        $rows = $qry->exec(self::$db);
+        $this->assertEquals([1, 2, 3], array_column($rows, 'id'));
     }
 
     /**

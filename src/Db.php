@@ -6,6 +6,7 @@
  */
 
 namespace Garden\Db;
+use Garden\Schema;
 
 /**
  * Defines a standard set of methods that all database drivers must conform to.
@@ -40,8 +41,8 @@ abstract class Db {
     const OP_AND = '$and';
     const OP_OR = '$or';
 
-    const ORDER_ASC = '$asc';
-    const ORDER_DESC = '$desc';
+    const ORDER_ASC = 'asc';
+    const ORDER_DESC = 'desc';
 
     const FETCH_TABLENAMES = 0x1;
     const FETCH_COLUMNS = 0x2;
@@ -134,6 +135,46 @@ abstract class Db {
     }
 
     /**
+     * Get the schema for a table's columns.
+     *
+     * @param string $tableName
+     * @return Schema
+     */
+    public function getTableSchema($tableName) {
+        $def = $this->getTableDef($tableName);
+
+        $s = [];
+        foreach ($def['columns'] as $name => $props) {
+            $sprops = ['type' => $props['type'], 'dbtype' => $props['type'], 'required' => $props['required']];
+
+            if (!empty($props['length'])) {
+                $sprops['length'] = $props['length'];
+            }
+            if (isset($props['default'])) {
+                $sprops['default'] = $props;
+            }
+
+            switch ($props['type']) {
+                case 'tinyint':
+                case 'smallint':
+                case 'int':
+                case 'bigint':
+                    $sprops['type'] = 'integer';
+                    break;
+                case 'varchar':
+                    $sprops['type'] = 'string';
+                    break;
+                default:
+            }
+
+            $s[$name] = $sprops;
+        }
+
+        $schema = new Schema($s);
+        return $schema;
+    }
+
+    /**
      * Get all of the tables in the database.
      *
      * @param bool $withDefs Whether or not to return the full table definitions or just the table names.
@@ -152,11 +193,10 @@ abstract class Db {
     /**
      * Set a table definition to the database.
      *
-     * @param string $tablename The name of the table.
      * @param array $tableDef The table definition.
      * @param array $options An array of additional options when adding the table.
      */
-    public function setTableDef(array $tableDef, array $options = []) {
+    public function defineTable(array $tableDef, array $options = []) {
         $tableName = $tableDef['name'];
         $lTableName = strtolower($tableName);
         $tableDef['name'] = $tableName;
@@ -234,7 +274,7 @@ abstract class Db {
      * @throws \Exception Throws an exception when there is a mismatch between the primary index and the primary key
      * defined on the columns themselves.
      */
-    protected function fixIndexes($tableName, array &$tableDef, $curTableDef = null) {
+    private function fixIndexes($tableName, array &$tableDef, $curTableDef = null) {
         // Loop through the columns and add get the primary key index.
         $primaryColumns = [];
         foreach ($tableDef['columns'] as $cname => $cdef) {
@@ -367,7 +407,11 @@ abstract class Db {
      * @return mixed
      * @see Db::insert()
      */
-    abstract public function load($tableName, $rows, array $options = []);
+    public function load($tableName, $rows, array $options = []) {
+        foreach ($rows as $row) {
+            $this->insert($tableName, $row, $options);
+        }
+    }
 
 
     /**
@@ -464,6 +508,20 @@ abstract class Db {
 
         return $default;
     }
+
+//    public static function jsonPrepare($data) {
+//
+//
+//        // First massage the data for JSON.
+//        array_walk_recursive($data, function (&$value, $key) {
+//            if ($value instanceof \DateTimeInterface) {
+//                /* @var \DateTimeInterface $value */
+//                return $value->format('c');
+//            }
+//        });
+//
+//        return $data;
+//    }
 }
 
 /**

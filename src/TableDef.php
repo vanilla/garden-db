@@ -34,10 +34,11 @@ class TableDef implements \JsonSerializable {
     /**
      * Initialize an instance of the {@link TableDef} class.
      *
-     * @param Db $db The database to execute against.
+     * @param string $name The name of the table.
      */
-    public function __construct() {
+    public function __construct($name = '') {
         $this->reset();
+        $this->table = $name;
     }
 
     /**
@@ -67,23 +68,10 @@ class TableDef implements \JsonSerializable {
      * : The column is required.
      * Anything else
      * : The column is required and this is its default.
-     *
-     * @param string|array $index The index that the column participates in.
      * @return TableDef
      */
-    public function column($name, $type, $nullDefault = false, $index = null) {
+    public function column($name, $type, $nullDefault = false) {
         $this->columns[$name] = $this->columnDef($type, $nullDefault);
-
-        $index = (array)$index;
-        foreach ($index as $typeStr) {
-            if (strpos($typeStr, '.') === false) {
-                $indexType = $typeStr;
-                $suffix = '';
-            } else {
-                list($indexType, $suffix) = explode('.', $typeStr);
-            }
-            $this->index($name, $indexType, $suffix);
-        }
 
         return $this;
     }

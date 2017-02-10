@@ -43,8 +43,11 @@ class Query {
 
     /**
      * Instantiate a new instance of the {@link Query} class.
+     *
+     * @param string $from The table to query.
      */
-    public function __construct() {
+    public function __construct($from = '') {
+        $this->from = $from;
         $this->where = [];
         $this->currentWhere = &$this->where;
         $this->whereStack = [];
@@ -157,6 +160,30 @@ class Query {
     }
 
     /**
+     * Add a like statement to the current where clause.
+     *
+     * @param string $column The name of the column to compare.
+     * @param string $value The like query.
+     * @return $this
+     */
+    public function addLike($column, $value) {
+        $r = $this->addWhere($column, [Db::OP_LIKE => $value]);
+        return $r;
+    }
+
+    /**
+     * Add an in statement to the current where clause.
+     *
+     * @param string $column The name of the column to compare.
+     * @param array $values The in list to check against.
+     * @return $this
+     */
+    public function addIn($column, array $values) {
+        $r = $this->addWhere($column, [Db::OP_IN, $values]);
+        return $r;
+    }
+
+    /**
      * Add an array of where statements.
      *
      * This method takes an array where the keys represent column names and the values represent filter values.
@@ -192,6 +219,22 @@ class Query {
             'offset' => $this->offset
         ];
 
+        return $r;
+    }
+
+    /**
+     * Execute this query against a database.
+     *
+     * @param Db $db The database to query.
+     * @return array Returns the query result.
+     */
+    public function exec(Db $db) {
+        $options = [
+            'limit' => $this->limit,
+            'offset' => $this->offset
+        ];
+
+        $r = $db->get($this->from, $this->where, $options);
         return $r;
     }
 
