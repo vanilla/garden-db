@@ -13,7 +13,7 @@ use Garden\Db\TableDef;
 /**
  * The base class for database tests.
  */
-abstract class BaseDbTest extends \PHPUnit_Framework_TestCase {
+abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
     /**
      * @var Db The database connection for the tests.
      */
@@ -44,12 +44,11 @@ abstract class BaseDbTest extends \PHPUnit_Framework_TestCase {
      */
     public static function setUpBeforeClass() {
         // Drop all of the tables in the database.
-        self::$db = static::createDb();
+        $db = static::createDb();
+        $tables = $db->getAllTables();
+        array_map([$db, 'dropTable'], $tables);
 
-        $tables = self::$db->getAllTables();
-        foreach ($tables as $table) {
-            self::$db->dropTable($table);
-        }
+        self::$db = $db;
     }
 
     /**

@@ -13,7 +13,11 @@ use Garden\Db\TableDef;
 /**
  * Test various aspects of the {@link TableDef} class and the {@link Db} class as it relates to it.
  */
-abstract class DbDefTest extends BaseDbTest {
+abstract class DbDefTest extends AbstractDbTest {
+    protected static function getPx() {
+        return 'dbdef_';
+    }
+
     /**
      * Test a basic call to {@link Db::createTable()}.
      */

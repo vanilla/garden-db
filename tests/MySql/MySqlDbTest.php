@@ -7,31 +7,11 @@
 
 namespace Garden\Db\Tests\MySql;
 
-use Garden\Db\Db;
-use Garden\Db\MySqlDb;
 use Garden\Db\Tests\DbTest;
-use PDO;
 
 /**
- * Exectute the {@link DbTest} tests against MySQL.
+ * Execute the {@link DbTest} tests against MySQL.
  */
 class MySqlDbTest extends DbTest {
-
-    /**
-     * Get the database connection for the test.
-     *
-     * @return Db Returns the db object.
-     */
-    protected static function createDb() {
-        $db = new MySqlDb(new PDO(
-            "mysql:host=127.0.0.1;dbname=phpunit_garden",
-            'travis',
-            null,
-            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-        ));
-
-        $db->setPx('db_');
-
-        return $db;
-    }
+    use MySqlTestTrait;
 }

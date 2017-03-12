@@ -14,21 +14,9 @@ use Garden\Db\TableDef;
 /**
  * Test the basic functionality of the Db* classes.
  */
-abstract class DbTest extends BaseDbTest {
-    /// Properties ///
-
-    /// Methods ///
-
-    /**
-     * Set up the db link for the test cases.
-     */
-    public static function setUpBeforeClass() {
-        // Drop all of the tables in the database.
-        $db = static::createDb();
-        $tables = $db->getAllTables();
-        array_map([$db, 'dropTable'], $tables);
-
-        self::$db = $db;
+abstract class DbTest extends AbstractDbTest {
+    protected static function getPx() {
+        return 'db_';
     }
 
     /**
