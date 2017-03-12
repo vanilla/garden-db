@@ -13,13 +13,6 @@ use PDO;
  * A {@link Db} class for connecting to MySQL.
  */
 class MySqlDb extends Db {
-    /// Properties ///
-
-    /**
-     * @var \PDO
-     */
-    protected $pdo;
-
     /**
      * @var string
      */
@@ -38,39 +31,17 @@ class MySqlDb extends Db {
         Db::ORDER_DESC => 'desc'
     ];
 
-    /// Methods ///
-
-    /**
-     * Initialize an instance of the {@link MySqlDb} class.
-     *
-     * @param PDO $pdo The connection to the database.
-     */
-    public function __construct(PDO $pdo) {
-        $this->pdo = $pdo;
-    }
-
     /**
      * {@inheritdoc}
      */
     public function dropTable($tableName, array $options = []) {
         $sql = 'drop table '.
             (self::val(Db::OPTION_IGNORE, $options) ? 'if exists ' : '').
-            $this->backtick($this->px.$tableName);
+            $this->escape($this->px.$tableName);
         $result = $this->query($sql, Db::QUERY_DEFINE);
         unset($this->tables[strtolower($tableName)]);
 
         return $result;
-    }
-
-    /**
-     * Surround a field with backticks.
-     *
-     * @param string $field The field to backtick.
-     * @return string Returns the field properly escaped and backticked.
-     * @link http://www.php.net/manual/en/pdo.quote.php#112169
-     */
-    protected function backtick($field) {
-        return '`'.str_replace('`', '``', $field).'`';
     }
 
     /**
@@ -176,7 +147,7 @@ class MySqlDb extends Db {
         $ltablename = strtolower($tableName);
         /* @var \PDOStatement $stmt */
         $stmt = $this->get(
-            'information_schema.COLUMNS',
+            new Literal('information_schema.COLUMNS'),
             [
                 'TABLE_SCHEMA' => $this->getDbName(),
                 'TABLE_NAME' => $tableName ? $this->px.$tableName : [Db::OP_LIKE => addcslashes($this->px, '_%').'%']
@@ -192,7 +163,6 @@ class MySqlDb extends Db {
                     'COLUMN_NAME'
                 ],
                 Db::OPTION_MODE => Db::MODE_PDO,
-                'escapeTable' => false,
                 'order' => ['TABLE_NAME', 'ORDINAL_POSITION']
             ]
         );
@@ -242,20 +212,20 @@ class MySqlDb extends Db {
     /**
      * Build a sql select statement.
      *
-     * @param string $tableName The name of the main table.
+     * @param string|Literal $tableName The name of the main table.
      * @param array $where The where filter.
      * @param array $options An array of additional query options.
      * @return string Returns the select statement as a string.
      * @see Db::get()
      */
-    public function buildSelect($tableName, array $where, array $options = []) {
+    protected function buildSelect($tableName, array $where, array $options = []) {
         $sql = '';
 
         // Build the select clause.
         if (isset($options['columns'])) {
             $columns = array();
             foreach ($options['columns'] as $value) {
-                $columns[] = $this->backtick($value);
+                $columns[] = $this->escape($value);
             }
             $sql .= 'select '.implode(', ', $columns);
         } else {
@@ -263,11 +233,12 @@ class MySqlDb extends Db {
         }
 
         // Build the from clause.
-        if (self::val('escapeTable', $options, true)) {
-            $sql .= "\nfrom ".$this->backtick($this->px.$tableName);
+        if ($tableName instanceof Literal) {
+            $tableName = $tableName->getValue($this);
         } else {
-            $sql .= "\nfrom $tableName";
+            $tableName = $this->escape($this->px.$tableName);
         }
+        $sql .= "\nfrom $tableName";
 
         // Build the where clause.
         $whereString = $this->buildWhere($where, Db::OP_AND);
@@ -285,7 +256,7 @@ class MySqlDb extends Db {
                     case Db::ORDER_DESC:
                         $direction = self::$map[$value];
 
-                        $orders[] = $this->backtick($key)." $direction";
+                        $orders[] = $this->escape($key)." $direction";
                         break;
                     default:
                         trigger_error("Invalid sort direction '$value' for column '$key'.", E_USER_WARNING);
@@ -326,7 +297,7 @@ class MySqlDb extends Db {
 
         $result = '';
         foreach ($where as $column => $value) {
-            $btcolumn = $this->backtick($column);
+            $btcolumn = $this->escape($column);
 
             if (is_array($value)) {
                 if (is_numeric($column)) {
@@ -370,14 +341,14 @@ class MySqlDb extends Db {
                                 } elseif (is_array($rval)) {
                                     $result .= "$btcolumn in ".$this->bracketList($rval);
                                 } else {
-                                    $result .= "$btcolumn = ".$this->quoteVal($rval);
+                                    $result .= "$btcolumn = ".$this->quote($rval);
                                 }
                                 break;
                             case Db::OP_GT:
                             case Db::OP_GTE:
                             case Db::OP_LT:
                             case Db::OP_LTE:
-                                $result .= "$btcolumn {$map[$vop]} ".$this->quoteVal($rval);
+                                $result .= "$btcolumn {$map[$vop]} ".$this->quote($rval);
                                 break;
                             case Db::OP_LIKE:
                                 $result .= $this->buildLike($btcolumn, $rval);
@@ -393,7 +364,7 @@ class MySqlDb extends Db {
                                 } elseif (is_array($rval)) {
                                     $result .= "$btcolumn not in ".$this->bracketList($rval);
                                 } else {
-                                    $result .= "$btcolumn <> ".$this->quoteVal($rval);
+                                    $result .= "$btcolumn <> ".$this->quote($rval);
                                 }
                                 break;
                         }
@@ -408,7 +379,7 @@ class MySqlDb extends Db {
                 if ($value === null) {
                     $result .= "$btcolumn is null";
                 } else {
-                    $result .= "$btcolumn = ".$this->quoteVal($value);
+                    $result .= "$btcolumn = ".$this->quote($value);
                 }
             }
         }
@@ -424,7 +395,7 @@ class MySqlDb extends Db {
      * @internal param bool $quotevals Whether or not to quote the values.
      */
     protected function buildLike($column, $value) {
-        return "$column like ".$this->quoteVal($value);
+        return "$column like ".$this->quote($value);
     }
 
     /**
@@ -441,11 +412,11 @@ class MySqlDb extends Db {
     public function bracketList($row, $quote = "'") {
         switch ($quote) {
             case "'":
-                $row = array_map([$this, 'quoteVal'], $row);
+                $row = array_map([$this, 'quote'], $row);
                 $quote = '';
                 break;
             case '`':
-                $row = array_map([$this, 'backtick'], $row);
+                $row = array_map([$this, 'escape'], $row);
                 $quote = '';
                 break;
         }
@@ -453,42 +424,6 @@ class MySqlDb extends Db {
         return "($quote".implode("$quote, $quote", $row)."$quote)";
     }
 
-    /**
-     * Gets the {@link PDO} object for this connection.
-     *
-     * @return \PDO
-     */
-    public function getPDO() {
-        return $this->pdo;
-    }
-
-    /**
-     * Set the connection to the database.
-     *
-     * @param PDO $pdo The new connection to the database.
-     * @return $this
-     */
-    public function setPDO(PDO $pdo) {
-        $this->pdo = $pdo;
-        return $this;
-    }
-
-    /**
-     * Optionally quote a where value.
-     *
-     * @param mixed $value The value to quote.
-     * @param string $column The column being operated on. It must already be quoted.
-     * @return string Returns the value, optionally quoted.
-     * @internal param bool $quote Whether or not to quote the value.
-     */
-    public function quoteVal($value, $column = '') {
-        if ($value instanceof Literal) {
-            /* @var Literal $value */
-            return $value->getValue($this, $column);
-        } else {
-            return $this->getPDO()->quote($value);
-        }
-    }
 
     /**
      * Get the current database name.
@@ -562,7 +497,7 @@ class MySqlDb extends Db {
         $ltablename = strtolower($tableName);
         /* @var \PDOStatement */
         $stmt = $this->get(
-            'information_schema.STATISTICS',
+            new Literal('information_schema.STATISTICS'),
             [
                 'TABLE_SCHEMA' => $this->getDbName(),
                 'TABLE_NAME' => $tableName ? $this->px.$tableName : [Db::OP_LIKE => addcslashes($this->px, '_%').'%']
@@ -574,7 +509,6 @@ class MySqlDb extends Db {
                     'NON_UNIQUE',
                     'COLUMN_NAME'
                 ],
-                'escapeTable' => false,
                 'order' => ['TABLE_NAME', 'INDEX_NAME', 'SEQ_IN_INDEX'],
                 Db::OPTION_MODE => Db::MODE_PDO
             ]
@@ -615,7 +549,7 @@ class MySqlDb extends Db {
             return $tables;
         }
 
-        // Grab the tablenames first.
+        // Grab the table names first.
         if ($this->allTablesFetched & Db::FETCH_TABLENAMES) {
             $tablenames = array_keys($this->tables);
         } else {
@@ -648,14 +582,13 @@ class MySqlDb extends Db {
     protected function getTableNames() {
         // Get the table names.
         $tables = (array)$this->get(
-            'information_schema.TABLES',
+            new Literal('information_schema.TABLES'),
             [
                 'TABLE_SCHEMA' => $this->getDbName(),
                 'TABLE_NAME' => [Db::OP_LIKE => addcslashes($this->px, '_%').'%']
             ],
             [
-                'columns' => ['TABLE_NAME'],
-                'escapeTable' => false
+                'columns' => ['TABLE_NAME']
             ]
         );
 
@@ -699,7 +632,7 @@ class MySqlDb extends Db {
         } else {
             $sql = 'insert ';
         }
-        $sql .= $this->backtick($this->px.$tableName);
+        $sql .= $this->escape($this->px.$tableName);
 
         // Add the list of values.
         $sql .=
@@ -727,7 +660,7 @@ class MySqlDb extends Db {
         // Add the duplicate key stuff.
         $updates = [];
         foreach ($row as $key => $value) {
-            $updates[] = $this->backtick($key).' = values('.$this->backtick($key).')';
+            $updates[] = $this->escape($key).' = values('.$this->escape($key).')';
         }
         $sql .= "\non duplicate key update ".implode(', ', $updates);
 
@@ -802,14 +735,14 @@ class MySqlDb extends Db {
     protected function buildUpdate($tableName, array $set, array $where, array $options = []) {
         $sql = 'update '.
             (self::val(Db::OPTION_IGNORE, $options) ? 'ignore ' : '').
-            $this->backtick($this->px.$tableName).
+            $this->escape($this->px.$tableName).
             "\nset\n  ";
 
         $parts = [];
         foreach ($set as $key => $value) {
-            $quotedKey = $this->backtick($key);
+            $quotedKey = $this->escape($key);
 
-            $parts[] = $quotedKey.' = '.$this->quoteVal($value);
+            $parts[] = $quotedKey.' = '.$this->quote($value);
         }
         $sql .= implode(",\n  ", $parts);
 
@@ -828,9 +761,9 @@ class MySqlDb extends Db {
             if (!empty($where)) {
                 throw new \InvalidArgumentException("You cannot truncate $tableName with a where filter.", 500);
             }
-            $sql = 'truncate table '.$this->backtick($this->px.$tableName);
+            $sql = 'truncate table '.$this->escape($this->px.$tableName);
         } else {
-            $sql = 'delete from '.$this->backtick($this->px.$tableName);
+            $sql = 'delete from '.$this->escape($this->px.$tableName);
 
             if (!empty($where)) {
                 $sql .= "\nwhere ".$this->buildWhere($where);
@@ -858,7 +791,7 @@ class MySqlDb extends Db {
             }
         }
 
-        $fullTablename = $this->backtick($this->px.$tableName);
+        $fullTablename = $this->escape($this->px.$tableName);
         $sql = "create table $fullTablename (\n  ".
             implode(",\n  ", $parts).
             "\n)";
@@ -878,14 +811,14 @@ class MySqlDb extends Db {
      * @return string Returns a string representing the column definition.
      */
     protected function columnDefString($name, array $def) {
-        $result = $this->backtick($name).' '.$this->columnTypeString($def['dbtype']);
+        $result = $this->escape($name).' '.$this->columnTypeString($def['dbtype']);
 
         if (!self::val('allowNull', $def)) {
             $result .= ' not null';
         }
 
         if (isset($def['default'])) {
-            $result .= ' default '.$this->quoteVal($def['default']);
+            $result .= ' default '.$this->quote($def['default']);
         }
 
         if (self::val('autoIncrement', $def)) {
@@ -908,7 +841,7 @@ class MySqlDb extends Db {
      * @return null|string Returns the index string or null if the index is not correct.
      */
     protected function indexDefString($tableName, array $def) {
-        $indexName = $this->backtick($this->buildIndexName($tableName, $def));
+        $indexName = $this->escape($this->buildIndexName($tableName, $def));
         switch (self::val('type', $def, Db::INDEX_IX)) {
             case Db::INDEX_IX:
                 return "index $indexName ".$this->bracketList($def['columns'], '`');
@@ -945,10 +878,10 @@ class MySqlDb extends Db {
 
         // Drop the columns and indexes.
         foreach ($alterDef['drop']['columns'] as $cname => $_) {
-            $parts[] = 'drop '.$this->backtick($cname);
+            $parts[] = 'drop '.$this->escape($cname);
         }
         foreach ($alterDef['drop']['indexes'] as $ixdef) {
-            $parts[] = 'drop index '.$this->backtick($ixdef['name']);
+            $parts[] = 'drop index '.$this->escape($ixdef['name']);
         }
 
         if (empty($parts)) {
@@ -957,7 +890,7 @@ class MySqlDb extends Db {
 
         $sql = 'alter '.
             (self::val(Db::OPTION_IGNORE, $options) ? 'ignore ' : '').
-            'table '.$this->backtick($this->px.$tablename)."\n  ".
+            'table '.$this->escape($this->px.$tablename)."\n  ".
             implode(",\n  ", $parts);
 
         $result = $this->query($sql, Db::QUERY_DEFINE);
@@ -976,7 +909,7 @@ class MySqlDb extends Db {
         $prev = ' first';
         foreach ($orders as $cname => &$value) {
             $value = $prev;
-            $prev = ' after '.$this->backtick($cname);
+            $prev = ' after '.$this->escape($cname);
         }
         return $orders;
     }

@@ -7,6 +7,8 @@
 
 namespace Garden\Db;
 
+use PDO;
+
 /**
  * Defines a standard set of methods that all database drivers must conform to.
  */
@@ -57,7 +59,7 @@ abstract class Db {
     /**
      * @var string The database prefix.
      */
-    protected $px = 'gdn_';
+    protected $px = '';
 
     /**
      * @var int The query execution mode.
@@ -78,6 +80,19 @@ abstract class Db {
      * @var int The number of rows that were affected by the last query.
      */
     protected $rowCount;
+    /**
+     * @var \PDO
+     */
+    protected $pdo;
+
+    /**
+     * Initialize an instance of the {@link MySqlDb} class.
+     *
+     * @param PDO $pdo The connection to the database.
+     */
+    public function __construct(PDO $pdo) {
+        $this->pdo = $pdo;
+    }
 
     /// Methods ///
 
@@ -318,7 +333,7 @@ abstract class Db {
     /**
      * Get data from the database.
      *
-     * @param string $tableName The name of the table to get the data from.
+     * @param string|Literal $tableName The name of the table to get the data from.
      * @param array $where An array of where conditions.
      * @param array $options An array of additional options.
      * @return mixed Returns the result set.
@@ -328,9 +343,9 @@ abstract class Db {
     /**
      * Get a single row from the database.
      *
-     * This is a conveinience method that calls {@link Db::get()} and shifts off the first row.
+     * This is a convenience method that calls {@link Db::get()} and shifts off the first row.
      *
-     * @param string $tableName The name of the table to get the data from.
+     * @param string|Literal $tableName The name of the table to get the data from.
      * @param array $where An array of where conditions.
      * @param array $options An array of additional options.
      * @return array|false Returns the row or false if there is no row.
@@ -473,6 +488,56 @@ abstract class Db {
         }
 
         return $default;
+    }
+
+    /**
+     * Escape an identifier.
+     *
+     * @param string|Literal $identifier The identifier to escape.
+     * @return string Returns the field properly escaped.
+     */
+    public function escape($identifier) {
+        if ($identifier instanceof Literal) {
+            return $identifier->getValue($this);
+        }
+        return '`'.str_replace('`', '``', $identifier).'`';
+    }
+
+    /**
+     * Optionally quote a where value.
+     *
+     * @param mixed $value The value to quote.
+     * @param string $column The column being operated on. It must already be quoted.
+     * @return string Returns the value, optionally quoted.
+     * @internal param bool $quote Whether or not to quote the value.
+     */
+    public function quote($value, $column = '') {
+        if ($value instanceof Literal) {
+            /* @var Literal $value */
+            return $value->getValue($this, $column);
+        } else {
+            return $this->getPDO()->quote($value);
+        }
+    }
+
+    /**
+     * Gets the {@link PDO} object for this connection.
+     *
+     * @return \PDO
+     */
+    public function getPDO() {
+        return $this->pdo;
+    }
+
+    /**
+     * Set the connection to the database.
+     *
+     * @param PDO $pdo The new connection to the database.
+     * @return $this
+     */
+    public function setPDO(PDO $pdo) {
+        $this->pdo = $pdo;
+        return $this;
     }
 }
 

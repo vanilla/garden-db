@@ -31,7 +31,7 @@ class Literal {
             $this->driverValues['default'] = $value;
         } elseif (is_array($value)) {
             foreach ($value as $key => $value) {
-                $this->driverValues[$this->normalizeKey($key)] = $value;
+                $this->driverValues[$this->driverKey($key)] = $value;
             }
         }
     }
@@ -40,18 +40,18 @@ class Literal {
      * Get the literal value.
      *
      * @param Db $db The database driver getting the value.
-     * @param string The column being operated on if applicable. It's up to the driver to quote the column.
+     * @param array ...$args Arguments to pass into the literal. This uses **sprintf()** so arguments must already be escaped.
      * @return string Returns the value for the specific driver, the default literal, or "null" if there is no default.
      */
-    public function getValue(Db $db, $column = '') {
-        $driver = $this->normalizeKey(get_class($db));
+    public function getValue(Db $db, ...$args) {
+        $driver = $this->driverKey($db);
 
         if (isset($this->driverValues[$driver])) {
-            return sprintf($this->driverValues[$driver], $column);
+            return sprintf($this->driverValues[$driver], ...$args);
         } elseif (isset($this->driverValues['default'])) {
-            return sprintf($this->driverValues['default'], $column);
+            return sprintf($this->driverValues['default'], ...$args);
         } else {
-            return 'null';
+            throw new \InvalidArgumentException("No literal for driver '$driver'.", 500);
         }
     }
 
@@ -59,11 +59,11 @@ class Literal {
      * Set the literal value.
      *
      * @param string $value The new value to set.
-     * @param string $driver The name of the database driver to set the value for.
+     * @param string|object $driver The name of the database driver to set the value for.
      * @return Literal Returns $this for fluent calls.
      */
     public function setValue($value, $driver = 'default') {
-        $driver = $this->normalizeKey($driver);
+        $driver = $this->driverKey($driver);
         $this->driverValues[$driver] = $value;
         return $this;
     }
@@ -71,10 +71,13 @@ class Literal {
     /**
      * Normalize the driver name for the drivers array.
      *
-     * @param string $key The name of the driver.
+     * @param string|object $key The name of the driver or an instance of a database driver.
      * @return string Returns the driver name normalized.
      */
-    protected function normalizeKey($key) {
+    protected function driverKey($key) {
+        if (is_object($key)) {
+            $key = get_class($key);
+        }
         $key = strtolower(basename($key));
 
         if (preg_match('`([az]+)(Db)?$`', $key, $m)) {
@@ -101,9 +104,9 @@ class Literal {
      */
     public static function timestamp() {
         $literal = new Literal([
-            'mysql' => 'unix_timestamp()',
-            'sqlite' => "date('now', 'unixepoch')",
-            'posgresql' => 'extract(epoch from now())',
+            MySqlDb::class => 'unix_timestamp()',
+            SqliteDb::class => "date('now', 'unixepoch')",
+//            'posgresql' => 'extract(epoch from now())',
             'default' => time()
         ]);
         return $literal;

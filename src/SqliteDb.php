@@ -57,7 +57,7 @@ class SqliteDb extends MySqlDb {
         $columns = array_keys(array_intersect_key($tableDef['columns'], $currentDef['columns']));
 
         // Build the insert/select statement.
-        $sql = 'insert into '.$this->backtick($this->px.$tablename)."\n".
+        $sql = 'insert into '.$this->escape($this->px.$tablename)."\n".
             $this->bracketList($columns, '`')."\n".
             $this->buildSelect($tmpTablename, [], ['columns' => $columns]);
 
@@ -75,9 +75,9 @@ class SqliteDb extends MySqlDb {
      */
     private function renameTable($oldname, $newname) {
         $renameSql = 'alter table '.
-            $this->backtick($this->px.$oldname).
+            $this->escape($this->px.$oldname).
             ' rename to '.
-            $this->backtick($this->px.$newname);
+            $this->escape($this->px.$newname);
         $this->query($renameSql, Db::QUERY_WRITE);
     }
 
@@ -104,7 +104,7 @@ class SqliteDb extends MySqlDb {
      */
     protected function dropIndex($indexName) {
         $sql = 'drop index if exists '.
-            $this->backtick($indexName);
+            $this->escape($indexName);
         $this->query($sql, Db::QUERY_DEFINE);
     }
 
@@ -121,7 +121,7 @@ class SqliteDb extends MySqlDb {
         } else {
             $sql = 'insert into ';
         }
-        $sql .= $this->backtick($this->px.$tableName);
+        $sql .= $this->escape($this->px.$tableName);
 
         // Add the list of values.
         $sql .=
@@ -135,7 +135,7 @@ class SqliteDb extends MySqlDb {
      * {@inheritdoc}
      */
     protected function buildLike($column, $value) {
-        return "$column like ".$this->quoteVal($value)." escape '\\'";
+        return "$column like ".$this->quote($value)." escape '\\'";
     }
 
     /**
@@ -144,12 +144,12 @@ class SqliteDb extends MySqlDb {
     protected function buildUpdate($tableName, array $set, array $where, array $options = []) {
         $sql = 'update '.
             (self::val(Db::OPTION_IGNORE, $options) ? 'or ignore ' : '').
-            $this->backtick($this->px.$tableName).
+            $this->escape($this->px.$tableName).
             "\nset\n  ";
 
         $parts = [];
         foreach ($set as $key => $value) {
-            $parts[] = $this->backtick($key).' = '.$this->quoteVal($value);
+            $parts[] = $this->escape($key).' = '.$this->quote($value);
         }
         $sql .= implode(",\n  ", $parts);
 
@@ -179,7 +179,7 @@ class SqliteDb extends MySqlDb {
             $def['dbtype'] = 'integer';
         }
 
-        $result = $this->backtick($name).' '.$this->columnTypeString($def['dbtype']);
+        $result = $this->escape($name).' '.$this->columnTypeString($def['dbtype']);
 
         if ($def['primary'] && $def['autoIncrement']) {
 //            if (val('autoincrement', $def)) {
@@ -187,7 +187,7 @@ class SqliteDb extends MySqlDb {
                 $def['primary'] = true;
 //            }
         } elseif (isset($def['default'])) {
-            $result .= ' default '.$this->quoteVal($def['default']);
+            $result .= ' default '.$this->quote($def['default']);
         } elseif (!$def['allowNull']) {
             $result .= ' not null';
         }
@@ -223,7 +223,7 @@ class SqliteDb extends MySqlDb {
             $parts[] = 'primary key '.$this->bracketList($pkIndex['columns'], '`');
         }
 
-        $fullTablename = $this->backtick($this->px.$tablename);
+        $fullTablename = $this->escape($this->px.$tablename);
         $sql = "create table $fullTablename (\n  ".
             implode(",\n  ", $parts).
             "\n)";
@@ -252,7 +252,7 @@ class SqliteDb extends MySqlDb {
             (self::val(Db::OPTION_IGNORE, $options) ? 'if not exists ' : '').
             $this->buildIndexName($tablename, $indexDef).
             ' on '.
-            $this->backtick($this->px.$tablename).
+            $this->escape($this->px.$tablename).
             $this->bracketList($indexDef['columns'], '`');
 
         $this->query($sql, Db::QUERY_DEFINE);
@@ -295,7 +295,7 @@ class SqliteDb extends MySqlDb {
             }
         }
 
-        $cdefs = (array)$this->query('pragma table_info('.$this->quoteVal($this->px.$tableName).')');
+        $cdefs = (array)$this->query('pragma table_info('.$this->quote($this->px.$tableName).')');
         if (empty($cdefs)) {
             return null;
         }
@@ -354,7 +354,7 @@ class SqliteDb extends MySqlDb {
             $this->tables[$tableName]['indexes'][Db::INDEX_PK] = $pk;
         }
 
-        $indexInfos = (array)$this->query('pragma index_list('.$this->quoteVal($this->px.$tableName).')');
+        $indexInfos = (array)$this->query('pragma index_list('.$this->quote($this->px.$tableName).')');
         foreach ($indexInfos as $row) {
             $indexName = $row['name'];
             if ($row['unique']) {
@@ -364,7 +364,7 @@ class SqliteDb extends MySqlDb {
             }
 
             // Query the columns in the index.
-            $columns = (array)$this->query('pragma index_info('.$this->quoteVal($indexName).')');
+            $columns = (array)$this->query('pragma index_info('.$this->quote($indexName).')');
 
             $index = [
                 'name' => $indexName,
@@ -410,21 +410,26 @@ class SqliteDb extends MySqlDb {
     protected function getTableNames() {
         // Get the table names.
         $tables = (array)$this->get(
-            'sqlite_master',
+            new Escaped('sqlite_master'),
             [
                 'type' => 'table',
                 'name' => [Db::OP_LIKE => addcslashes($this->px, '_%').'%']
             ],
             [
-                'columns' => ['name'],
-                'escapeTable' => false
+                'columns' => ['name']
             ]
         );
+        $tables = array_column($tables, 'name');
+
+        // Remove internal tables.
+        $tables = array_filter($tables, function ($name) {
+            return substr($name, 0, 7) !== 'sqlite_';
+        });
 
         // Strip the table prefixes.
         $tables = array_map(function ($name) {
             return ltrim_substr($name, $this->px);
-        }, array_column($tables, 'name'));
+        }, $tables);
 
         return $tables;
     }
@@ -470,7 +475,7 @@ class SqliteDb extends MySqlDb {
      * @return string Returns the value, optionally quoted.
      * @internal param bool $quote Whether or not to quote the value.
      */
-    public function quoteVal($value, $column = '') {
+    public function quote($value, $column = '') {
         if ($value instanceof Literal) {
             /* @var Literal $value */
             return $value->getValue($this, $column);
