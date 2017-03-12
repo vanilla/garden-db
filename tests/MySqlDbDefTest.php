@@ -19,10 +19,11 @@ class MySqlDbDefTest extends DbDefTest {
      * @return \Garden\Db\MySqlDb Returns the new database connection.
      */
     protected static function createDb() {
-        $db = new MySqlDb(new \PDO(
-            "mysql:host=127.0.0.1;dbname=phpunit_garden",
-            'travis'
-        ));
+        $pdo = new \PDO("mysql:host=127.0.0.1", 'travis');
+        $pdo->query("create database if not exists `phpunit_garden`");
+        $pdo->query("use `phpunit_garden`");
+
+        $db = new MySqlDb($pdo);
 
         $db->setPx('gdndef_');
 
