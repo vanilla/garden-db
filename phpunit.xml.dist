@@ -19,8 +19,14 @@
     </php>
 
     <testsuites>
-        <testsuite name="Garden Container Tests">
+        <testsuite name="All">
             <directory suffix="Test.php">./tests/</directory>
+        </testsuite>
+        <testsuite name="MySql">
+            <directory suffix="Test.php">./tests/MySql</directory>
+        </testsuite>
+        <testsuite name="Sqlite">
+            <directory suffix="Test.php">./tests/Sqlite</directory>
         </testsuite>
     </testsuites>
 

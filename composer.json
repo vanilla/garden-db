@@ -22,7 +22,7 @@
 	},
 	"autoload-dev": {
 		"psr-4": {
-			"Garden\\Tests\\Db\\": "tests"
+			"Garden\\Db\\Tests\\": "tests"
 		}
 	}
 }

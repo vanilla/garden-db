@@ -5,7 +5,7 @@
  * @license MIT
  */
 
-namespace Garden\Tests\Db;
+namespace Garden\Db\Tests;
 
 use Garden\Db\Db;
 use Garden\Db\Query;

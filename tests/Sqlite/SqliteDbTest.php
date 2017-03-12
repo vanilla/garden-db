@@ -5,10 +5,11 @@
  * @license MIT
  */
 
-namespace Garden\Tests\Db;
+namespace Garden\Db\Tests\Sqlite;
 
 use Garden\Db\Db;
 use Garden\Db\SqliteDb;
+use Garden\Db\Tests\DbTest;
 use PDO;
 
 /**
@@ -24,7 +25,7 @@ class SqliteDbTest extends DbTest {
         if (getenv('TRAVIS')) {
             $path = ':memory:';
         } else {
-            $path = __DIR__.'/cache/dbtest.sqlite';
+            $path = __DIR__.'/../cache/dbtest.sqlite';
         }
         $pdo = new PDO("sqlite:$path", null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 

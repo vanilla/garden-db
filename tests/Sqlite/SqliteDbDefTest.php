@@ -5,9 +5,10 @@
  * @license MIT
  */
 
-namespace Garden\Tests\Db;
+namespace Garden\Db\Tests\Sqlite;
 
 use Garden\Db\SqliteDb;
+use Garden\Db\Tests\DbDefTest;
 
 /**
  * Run the {@link DbDefTest} against {@link SqliteDb}.
@@ -22,7 +23,7 @@ class SqliteDbDefTest extends DbDefTest {
         if (getenv('TRAVIS')) {
             $path = ':memory:';
         } else {
-            $path = __DIR__.'/cache/dbdeftest.sqlite';
+            $path = __DIR__.'/../cache/dbdeftest.sqlite';
         }
 
         $db = new SqliteDb(new \PDO("sqlite:$path"));

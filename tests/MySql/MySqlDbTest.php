@@ -5,11 +5,11 @@
  * @license MIT
  */
 
-namespace Garden\Tests\Db;
-
+namespace Garden\Db\Tests\MySql;
 
 use Garden\Db\Db;
 use Garden\Db\MySqlDb;
+use Garden\Db\Tests\DbTest;
 use PDO;
 
 /**
@@ -29,6 +29,8 @@ class MySqlDbTest extends DbTest {
             null,
             [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
         ));
+
+        $db->setPx('db_');
 
         return $db;
     }
