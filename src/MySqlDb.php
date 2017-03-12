@@ -477,13 +477,14 @@ class MySqlDb extends Db {
      * Optionally quote a where value.
      *
      * @param mixed $value The value to quote.
+     * @param string $column The column being operated on. It must already be quoted.
      * @return string Returns the value, optionally quoted.
      * @internal param bool $quote Whether or not to quote the value.
      */
-    public function quoteVal($value) {
+    public function quoteVal($value, $column = '') {
         if ($value instanceof Literal) {
             /* @var Literal $value */
-            return $value->getValue($this);
+            return $value->getValue($this, $column);
         } else {
             return $this->getPDO()->quote($value);
         }
@@ -806,7 +807,9 @@ class MySqlDb extends Db {
 
         $parts = [];
         foreach ($set as $key => $value) {
-            $parts[] = $this->backtick($key).' = '.$this->quoteVal($value);
+            $quotedKey = $this->backtick($key);
+
+            $parts[] = $quotedKey.' = '.$this->quoteVal($value);
         }
         $sql .= implode(",\n  ", $parts);
 

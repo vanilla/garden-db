@@ -6,7 +6,6 @@
  */
 
 namespace Garden\Db;
-use Garden\Schema;
 
 /**
  * Defines a standard set of methods that all database drivers must conform to.
@@ -120,7 +119,8 @@ abstract class Db {
 
         // Check to see if the table isn't in the cache first.
         if ($this->allTablesFetched & Db::FETCH_TABLENAMES &&
-            !isset($this->tables[$ltablename])) {
+            !isset($this->tables[$ltablename])
+        ) {
             return null;
         }
 
@@ -182,7 +182,8 @@ abstract class Db {
             // Return 0 if the values are different, not the same.
             if (self::val('dbtype', $curr) !== self::val('dbtype', $new) ||
                 self::val('allowNull', $curr) !== self::val('allowNull', $new) ||
-                self::val('default', $curr) !== self::val('default', $new)) {
+                self::val('default', $curr) !== self::val('default', $new)
+            ) {
                 return 0;
             }
             return 1;
@@ -211,7 +212,8 @@ abstract class Db {
         // Check to see if any alterations at all need to be made.
         if (empty($alterDef['add']['columns']) && empty($alterDef['add']['indexes']) &&
             empty($alterDef['drop']['columns']) && empty($alterDef['drop']['indexes']) &&
-            empty($alterDef['alter']['columns'])) {
+            empty($alterDef['alter']['columns'])
+        ) {
             return;
         }
 
@@ -468,49 +470,6 @@ abstract class Db {
 
         return $default;
     }
-
-//    public static function jsonPrepare($data) {
-//
-//
-//        // First massage the data for JSON.
-//        array_walk_recursive($data, function (&$value, $key) {
-//            if ($value instanceof \DateTimeInterface) {
-//                /* @var \DateTimeInterface $value */
-//                return $value->format('c');
-//            }
-//        });
-//
-//        return $data;
-//    }
-}
-
-/**
- * Take all of the items in an array and make a new array with them specified by mappings.
- *
- * @param array $array The input array to translate.
- * @param array $mappings The mappings to translate the array.
- * @return array
- *
- * @category Array Functions
- */
-function array_translate($array, $mappings) {
-    $array = (array)$array;
-    $result = array();
-    foreach ($mappings as $index => $value) {
-        if (is_numeric($index)) {
-            $key = $value;
-            $newKey = $value;
-        } else {
-            $key = $index;
-            $newKey = $value;
-        }
-        if (isset($array[$key])) {
-            $result[$newKey] = $array[$key];
-        } else {
-            $result[$newKey] = null;
-        }
-    }
-    return $result;
 }
 
 /**

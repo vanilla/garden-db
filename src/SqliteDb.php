@@ -466,13 +466,14 @@ class SqliteDb extends MySqlDb {
      * Optionally quote a where value.
      *
      * @param mixed $value The value to quote.
+     * @param string $column The name of the column being operated on.
      * @return string Returns the value, optionally quoted.
      * @internal param bool $quote Whether or not to quote the value.
      */
-    public function quoteVal($value) {
+    public function quoteVal($value, $column = '') {
         if ($value instanceof Literal) {
             /* @var Literal $value */
-            return $value->getValue($this);
+            return $value->getValue($this, $column);
         } elseif (in_array(gettype($value), ['integer', 'double'])) {
             return (string)$value;
         } elseif ($value === true) {
