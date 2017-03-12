@@ -142,7 +142,10 @@ class Model {
     }
 
     public function update(array $set, array $where) {
-        $r = $this->db->update($this->name, $set, $where);
+        $valid = $this->validate($set, true);
+        $serialized = $this->serialize($valid);
+
+        $r = $this->db->update($this->name, $serialized, $where);
         return $r;
     }
 

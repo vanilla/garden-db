@@ -38,12 +38,12 @@ abstract class DbTest extends BaseDbTest {
         $tableDef = [
             'name' => 'user',
             'columns' => [
-                'userID' => ['type' => 'int', 'primary' => true, 'autoincrement' => true],
-                'name' => ['type' => 'varchar(50)', 'required' => true],
-                'email' => ['type' => 'varchar(255)', 'required' => true],
-                'fullName' => ['type' => 'varchar(50)'],
-                'banned' => ['type' => 'tinyint', 'required' => true, 'default' => 0],
-                'insertTime' => ['type' => 'int', 'required' => true]
+                'userID' => ['dbtype' => 'int', 'primary' => true, 'autoIncrement' => true],
+                'name' => ['dbtype' => 'varchar(50)'],
+                'email' => ['dbtype' => 'varchar(255)'],
+                'fullName' => ['dbtype' => 'varchar(50)', 'allowNull' => true],
+                'banned' => ['dbtype' => 'tinyint', 'default' => 0],
+                'insertTime' => ['dbtype' => 'int']
             ],
             'indexes' => [
                 ['columns' => ['name'], 'type' => Db::INDEX_UNIQUE],
@@ -255,7 +255,7 @@ abstract class DbTest extends BaseDbTest {
             [
                 'name' => 'tuple',
                 'columns' => [
-                    'id' => ['type' => 'int']
+                    'id' => ['dbtype' => 'int', 'allowNull' => true]
                 ],
                 'indexes' => [
                     ['columns' => ['id']],

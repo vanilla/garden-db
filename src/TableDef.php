@@ -50,7 +50,7 @@ class TableDef implements \JsonSerializable {
         $this->table = '';
         $this->columns = [];
         $this->indexes = [];
-        $this->options = [];
+//        $this->options = [];
 
         return $this;
     }
@@ -92,15 +92,15 @@ class TableDef implements \JsonSerializable {
      * @return array Returns the column def as an array.
      */
     protected function columnDef($type, $nullDefault = false) {
-        $column = ['type' => $type];
+        $column = ['dbtype' => $type];
 
         if ($nullDefault === null || $nullDefault == true) {
-            $column['required'] = false;
+            $column['allowNull'] = true;
         }
         if ($nullDefault === false) {
-            $column['required'] = true;
+            $column['allowNull'] = false;
         } else {
-            $column['required'] = true;
+            $column['allowNull'] = false;
             $column['default'] = $nullDefault;
         }
 
@@ -116,7 +116,7 @@ class TableDef implements \JsonSerializable {
      */
     public function primaryKey($name, $type = 'int') {
         $column = $this->columnDef($type, false);
-        $column['autoincrement'] = true;
+        $column['autoIncrement'] = true;
         $column['primary'] = true;
 
         $this->columns[$name] = $column;

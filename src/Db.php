@@ -135,46 +135,6 @@ abstract class Db {
     }
 
     /**
-     * Get the schema for a table's columns.
-     *
-     * @param string $tableName
-     * @return Schema
-     */
-    public function getTableSchema($tableName) {
-        $def = $this->getTableDef($tableName);
-
-        $s = [];
-        foreach ($def['columns'] as $name => $props) {
-            $sprops = ['type' => $props['type'], 'dbtype' => $props['type'], 'required' => $props['required']];
-
-            if (!empty($props['length'])) {
-                $sprops['length'] = $props['length'];
-            }
-            if (isset($props['default'])) {
-                $sprops['default'] = $props;
-            }
-
-            switch ($props['type']) {
-                case 'tinyint':
-                case 'smallint':
-                case 'int':
-                case 'bigint':
-                    $sprops['type'] = 'integer';
-                    break;
-                case 'varchar':
-                    $sprops['type'] = 'string';
-                    break;
-                default:
-            }
-
-            $s[$name] = $sprops;
-        }
-
-        $schema = new Schema($s);
-        return $schema;
-    }
-
-    /**
      * Get all of the tables in the database.
      *
      * @param bool $withDefs Whether or not to return the full table definitions or just the table names.
@@ -220,9 +180,9 @@ abstract class Db {
         $alterDef['add']['columns'] = array_diff_key($newColumns, $curColumns);
         $alterDef['alter']['columns'] = array_uintersect_assoc($newColumns, $curColumns, function ($new, $curr) {
             // Return 0 if the values are different, not the same.
-            if (self::val('type', $curr) !== self::val('type', $new) ||
-                self::val('required', $curr) !== self::val('required', $new) ||
-                self::val('default', $curr) !== self::val('required', $new)) {
+            if (self::val('dbtype', $curr) !== self::val('dbtype', $new) ||
+                self::val('allowNull', $curr) !== self::val('allowNull', $new) ||
+                self::val('default', $curr) !== self::val('default', $new)) {
                 return 0;
             }
             return 1;

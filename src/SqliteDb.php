@@ -111,7 +111,7 @@ class SqliteDb extends MySqlDb {
     /**
      * {@inheritdoc}
      */
-    protected function buildInsert($tableName, array $row, $quoteVals = true, $options = []) {
+    protected function buildInsert($tableName, array $row, $options = []) {
         if (self::val(Db::OPTION_UPSERT, $options)) {
             throw new \Exception("Upsert is not supported.");
         } elseif (self::val(Db::OPTION_IGNORE, $options)) {
@@ -126,7 +126,7 @@ class SqliteDb extends MySqlDb {
         // Add the list of values.
         $sql .=
             "\n".$this->bracketList(array_keys($row), '`').
-            "\nvalues".$this->bracketList($row, $quoteVals ? "'" : '');
+            "\nvalues".$this->bracketList($row, "'");
 
         return $sql;
     }
@@ -134,14 +134,14 @@ class SqliteDb extends MySqlDb {
     /**
      * {@inheritdoc}
      */
-    protected function buildLike($column, $value, $quotevals) {
-        return "$column like ".$this->quoteVal($value, $quotevals)." escape '\\'";
+    protected function buildLike($column, $value) {
+        return "$column like ".$this->quoteVal($value)." escape '\\'";
     }
 
     /**
      * {@inheritdoc}
      */
-    protected function buildUpdate($tableName, array $set, array $where, $quoteVals = true, array $options = []) {
+    protected function buildUpdate($tableName, array $set, array $where, array $options = []) {
         $sql = 'update '.
             (self::val(Db::OPTION_IGNORE, $options) ? 'or ignore ' : '').
             $this->backtick($this->px.$tableName).
@@ -149,12 +149,12 @@ class SqliteDb extends MySqlDb {
 
         $parts = [];
         foreach ($set as $key => $value) {
-            $parts[] = $this->backtick($key).' = '.$this->quoteVal($value, $quoteVals);
+            $parts[] = $this->backtick($key).' = '.$this->quoteVal($value);
         }
         $sql .= implode(",\n  ", $parts);
 
         if (!empty($where)) {
-            $sql .= "\nwhere ".$this->buildWhere($where, Db::OP_AND, $quoteVals);
+            $sql .= "\nwhere ".$this->buildWhere($where, Db::OP_AND);
         }
 
         return $sql;
@@ -168,21 +168,27 @@ class SqliteDb extends MySqlDb {
      * @return string Returns a string representing the column definition.
      */
     protected function columnDefString($name, array $def) {
+        $def += [
+            'autoIncrement' => false,
+            'primary' => false,
+            'allowNull' => false
+        ];
+
         // Auto-increments MUST be of type integer.
-        if (self::val('autoincrement', $def)) {
-            $def['type'] = 'integer';
+        if ($def['autoIncrement']) {
+            $def['dbtype'] = 'integer';
         }
 
-        $result = $this->backtick($name).' '.$this->columnTypeString($def['type']);
+        $result = $this->backtick($name).' '.$this->columnTypeString($def['dbtype']);
 
-        if (self::val('primary', $def) && self::val('autoincrement', $def)) {
+        if ($def['primary'] && $def['autoIncrement']) {
 //            if (val('autoincrement', $def)) {
                 $result .= ' primary key autoincrement';
                 $def['primary'] = true;
 //            }
         } elseif (isset($def['default'])) {
             $result .= ' default '.$this->quoteVal($def['default']);
-        } elseif (self::val('required', $def)) {
+        } elseif (!$def['allowNull']) {
             $result .= ' not null';
         }
 
@@ -203,7 +209,7 @@ class SqliteDb extends MySqlDb {
             foreach ($pkIndex['columns'] as $column) {
                 $cdef = $tableDef['columns'][$column];
                 $parts[] = $this->columnDefString($column, $cdef);
-                $autoinc |= self::val('autoincrement', $cdef, false);
+                $autoinc |= self::val('autoIncrement', $cdef, false);
                 unset($tableDef['columns'][$column]);
             }
         }
@@ -298,8 +304,8 @@ class SqliteDb extends MySqlDb {
         $pk = [];
         foreach ($cdefs as $cdef) {
             $column = [
-                'type' => $this->columnTypeString($cdef['type']),
-                'required' => force_bool($cdef['notnull']),
+                'dbtype' => $this->columnTypeString($cdef['type']),
+                'allowNull' => !force_bool($cdef['notnull'])//, FILTER_VALIDATE_BOOLEAN),
             ];
             if ($cdef['pk']) {
                 $pk[] = $cdef['name'];
@@ -460,23 +466,21 @@ class SqliteDb extends MySqlDb {
      * Optionally quote a where value.
      *
      * @param mixed $value The value to quote.
-     * @param bool $quote Whether or not to quote the value.
      * @return string Returns the value, optionally quoted.
+     * @internal param bool $quote Whether or not to quote the value.
      */
-    public function quoteVal($value, $quote = true) {
+    public function quoteVal($value) {
         if ($value instanceof Literal) {
             /* @var Literal $value */
-            return $value->getValue('mysql');
+            return $value->getValue($this);
         } elseif (in_array(gettype($value), ['integer', 'double'])) {
             return (string)$value;
         } elseif ($value === true) {
             return '1';
         } elseif ($value === false) {
             return '0';
-        } elseif ($quote) {
-            return $this->getPDO()->quote($value);
         } else {
-            return $value;
+            return $this->getPDO()->quote($value);
         }
     }
 }

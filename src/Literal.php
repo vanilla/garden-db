@@ -39,16 +39,17 @@ class Literal {
     /**
      * Get the literal value.
      *
-     * @param string $driver The name of the database driver to fetch the literal for.
+     * @param Db $db The database driver getting the value.
+     * @param string The column being operated on if applicable. It's up to the driver to quote the column.
      * @return string Returns the value for the specific driver, the default literal, or "null" if there is no default.
      */
-    public function getValue($driver = 'default') {
-        $driver = $this->normalizeKey($driver);
+    public function getValue(Db $db, $column = '') {
+        $driver = $this->normalizeKey(get_class($db));
 
         if (isset($this->driverValues[$driver])) {
-            return $this->driverValues[$driver];
+            return sprintf($this->driverValues[$driver], $column);
         } elseif (isset($this->driverValues['default'])) {
-            return $this->driverValues['default'];
+            return sprintf($this->driverValues['default'], $column);
         } else {
             return 'null';
         }
@@ -74,7 +75,12 @@ class Literal {
      * @return string Returns the driver name normalized.
      */
     protected function normalizeKey($key) {
-        return rtrim_substr(strtolower(basename($key)), 'db');
+        $key = strtolower(basename($key));
+
+        if (preg_match('`([az]+)(Db)?$`', $key, $m)) {
+            $key = $m;
+        }
+        return $key;
     }
 
     /**
@@ -89,7 +95,7 @@ class Literal {
     }
 
     /**
-     * Creat and return a {@link Literal} object that will query the current unix timesatmp.
+     * Create and return a {@link Literal} object that will query the current unix timesatmp.
      *
      * @return Literal Returns the timestamp expression.
      */

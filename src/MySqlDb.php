@@ -206,18 +206,18 @@ class MySqlDb extends Db {
 
             foreach ($cdefs as $cdef) {
                 $column = [
-                    'type' => $this->columnTypeString($cdef['COLUMN_TYPE']),
-                    'required' => !force_bool($cdef['IS_NULLABLE']),
+                    'dbtype' => $this->columnTypeString($cdef['COLUMN_TYPE']),
+                    'allowNull' => force_bool($cdef['IS_NULLABLE']),
                 ];
                 if ($cdef['EXTRA'] === 'auto_increment') {
-                    $column['autoincrement'] = true;
+                    $column['autoIncrement'] = true;
                 }
                 if ($cdef['COLUMN_KEY'] === 'PRI') {
                     $column['primary'] = true;
                 }
 
                 if ($cdef['COLUMN_DEFAULT'] !== null) {
-                    $column['default'] = $this->forceType($cdef['COLUMN_DEFAULT'], $column['type']);
+                    $column['default'] = $this->forceType($cdef['COLUMN_DEFAULT'], $column['dbtype']);
                 }
 
                 $columns[$cdef['COLUMN_NAME']] = $column;
@@ -318,10 +318,9 @@ class MySqlDb extends Db {
      * @param array $where There where string.
      * This is an array in the form `['column' => 'value']` with more advanced options for non-equality comparisons.
      * @param string $op The logical operator to join multiple field comparisons.
-     * @param bool $quotevals Whether or not to quote the where values.
      * @return string The where string.
      */
-    protected function buildWhere($where, $op = Db::OP_AND, $quotevals = true) {
+    protected function buildWhere($where, $op = Db::OP_AND) {
         $map = static::$map;
         $strop = $map[$op];
 
@@ -334,13 +333,13 @@ class MySqlDb extends Db {
                     // This is a bracketed expression.
                     $result .= (empty($result) ? '' : "\n  $strop ").
                         "(\n  ".
-                        $this->buildWhere($value, $op, $quotevals).
+                        $this->buildWhere($value, $op).
                         "\n  )";
                 } elseif (in_array($column, [Db::OP_AND, Db::OP_OR])) {
                     // This is an AND/OR expression.
                     $result .= (empty($result) ? '' : "\n  $strop ").
                         "(\n  ".
-                        $this->buildWhere($value, $column, $quotevals).
+                        $this->buildWhere($value, $column).
                         "\n  )";
                 } else {
                     if (isset($value[0])) {
@@ -362,7 +361,7 @@ class MySqlDb extends Db {
                                     $innerWhere = [$column => $rval];
                                 }
                                 $result .= "(\n  ".
-                                    $this->buildWhere($innerWhere, $vop, $quotevals).
+                                    $this->buildWhere($innerWhere, $vop).
                                     "\n  )";
                                 break;
                             case Db::OP_EQ:
@@ -371,17 +370,17 @@ class MySqlDb extends Db {
                                 } elseif (is_array($rval)) {
                                     $result .= "$btcolumn in ".$this->bracketList($rval);
                                 } else {
-                                    $result .= "$btcolumn = ".$this->quoteVal($rval, $quotevals);
+                                    $result .= "$btcolumn = ".$this->quoteVal($rval);
                                 }
                                 break;
                             case Db::OP_GT:
                             case Db::OP_GTE:
                             case Db::OP_LT:
                             case Db::OP_LTE:
-                                $result .= "$btcolumn {$map[$vop]} ".$this->quoteVal($rval, $quotevals);
+                                $result .= "$btcolumn {$map[$vop]} ".$this->quoteVal($rval);
                                 break;
                             case Db::OP_LIKE:
-                                $result .= $this->buildLike($btcolumn, $rval, $quotevals);
+                                $result .= $this->buildLike($btcolumn, $rval);
                                 break;
                             case Db::OP_IN:
                                 // Quote the in values.
@@ -394,7 +393,7 @@ class MySqlDb extends Db {
                                 } elseif (is_array($rval)) {
                                     $result .= "$btcolumn not in ".$this->bracketList($rval);
                                 } else {
-                                    $result .= "$btcolumn <> ".$this->quoteVal($rval, $quotevals);
+                                    $result .= "$btcolumn <> ".$this->quoteVal($rval);
                                 }
                                 break;
                         }
@@ -409,7 +408,7 @@ class MySqlDb extends Db {
                 if ($value === null) {
                     $result .= "$btcolumn is null";
                 } else {
-                    $result .= "$btcolumn = ".$this->quoteVal($value, $quotevals);
+                    $result .= "$btcolumn = ".$this->quoteVal($value);
                 }
             }
         }
@@ -421,11 +420,11 @@ class MySqlDb extends Db {
      *
      * @param string $column The column name.
      * @param mixed $value The right-hand value.
-     * @param bool $quotevals Whether or not to quote the values.
      * @return string Returns the like expression.
+     * @internal param bool $quotevals Whether or not to quote the values.
      */
-    protected function buildLike($column, $value, $quotevals) {
-        return "$column like ".$this->quoteVal($value, $quotevals);
+    protected function buildLike($column, $value) {
+        return "$column like ".$this->quoteVal($value);
     }
 
     /**
@@ -442,7 +441,7 @@ class MySqlDb extends Db {
     public function bracketList($row, $quote = "'") {
         switch ($quote) {
             case "'":
-                $row = array_map([$this->getPDO(), 'quote'], $row);
+                $row = array_map([$this, 'quoteVal'], $row);
                 $quote = '';
                 break;
             case '`':
@@ -478,17 +477,15 @@ class MySqlDb extends Db {
      * Optionally quote a where value.
      *
      * @param mixed $value The value to quote.
-     * @param bool $quote Whether or not to quote the value.
      * @return string Returns the value, optionally quoted.
+     * @internal param bool $quote Whether or not to quote the value.
      */
-    public function quoteVal($value, $quote = true) {
+    public function quoteVal($value) {
         if ($value instanceof Literal) {
             /* @var Literal $value */
-            return $value->getValue('mysql');
-        } elseif ($quote) {
-            return $this->getPDO()->quote($value);
+            return $value->getValue($this);
         } else {
-            return $value;
+            return $this->getPDO()->quote($value);
         }
     }
 
@@ -505,7 +502,7 @@ class MySqlDb extends Db {
     }
 
     /**
-     * Parse a column type string and return it in a way that is suitible for a create/alter table statement.
+     * Parse a column type string and return it in a way that is suitable for a create/alter table statement.
      *
      * @param string $typeString The string to parse.
      * @return string Returns a canonical string.
@@ -513,7 +510,7 @@ class MySqlDb extends Db {
     protected function columnTypeString($typeString) {
         $type = null;
 
-        if (substr($type, 0, 4) === 'enum') {
+        if (substr($typeString, 0, 4) === 'enum') {
             // This is an enum which will come in as an array.
             if (preg_match_all("`'([^']+)'`", $typeString, $matches)) {
                 $type = $matches[1];
@@ -673,7 +670,7 @@ class MySqlDb extends Db {
      * {@inheritdoc}
      */
     public function insert($tableName, array $rows, array $options = []) {
-        $sql = $this->buildInsert($tableName, $rows, true, $options);
+        $sql = $this->buildInsert($tableName, $rows, $options);
         $this->query($sql, Db::QUERY_WRITE);
         $id = $this->getPDO()->lastInsertId();
         if (is_numeric($id)) {
@@ -688,13 +685,12 @@ class MySqlDb extends Db {
      *
      * @param string $tableName The name of the table to insert to.
      * @param array $row The row to insert.
-     * @param bool $quoteVals Whether or not to quote the values.
      * @param array $options An array of options for the insert. See {@link Db::insert} for the options.
      * @return string Returns the the sql string of the insert statement.
      */
-    protected function buildInsert($tableName, array $row, $quoteVals = true, $options = []) {
+    protected function buildInsert($tableName, array $row, $options = []) {
         if (self::val(Db::OPTION_UPSERT, $options)) {
-            return $this->buildUpsert($tableName, $row, $quoteVals, $options);
+            return $this->buildUpsert($tableName, $row, $options);
         } elseif (self::val(Db::OPTION_IGNORE, $options)) {
             $sql = 'insert ignore ';
         } elseif (self::val(Db::OPTION_REPLACE, $options)) {
@@ -707,7 +703,7 @@ class MySqlDb extends Db {
         // Add the list of values.
         $sql .=
             "\n".$this->bracketList(array_keys($row), '`').
-            "\nvalues".$this->bracketList($row, $quoteVals ? "'" : '');
+            "\nvalues".$this->bracketList($row, "'");
 
         return $sql;
     }
@@ -719,14 +715,13 @@ class MySqlDb extends Db {
      *
      * @param string $tableName The name of the table to update.
      * @param array $row The row to insert or update.
-     * @param bool $quoteVals Whether or not to quote the values in the row.
      * @param array $options An array of additional query options.
      * @return string Returns the upsert statement as a string.
      */
-    protected function buildUpsert($tableName, array $row, $quoteVals = true, $options = []) {
+    protected function buildUpsert($tableName, array $row, $options = []) {
         // Build the initial insert statement first.
         unset($options[Db::OPTION_UPSERT]);
-        $sql = $this->buildInsert($tableName, $row, $quoteVals, $options);
+        $sql = $this->buildInsert($tableName, $row, $options);
 
         // Add the duplicate key stuff.
         $updates = [];
@@ -752,16 +747,15 @@ class MySqlDb extends Db {
             if ($first) {
                 // Build the insert statement from the first row.
                 foreach ($row as $key => $value) {
-                    $spec[$key] = $this->paramName($key);
+                    $spec[$key] = new Literal($this->paramName($key));
                 }
 
-                $sql = $this->buildInsert($tableName, $spec, false, $options);
+                $sql = $this->buildInsert($tableName, $spec, $options);
                 $stmt = $this->getPDO()->prepare($sql);
                 $first = false;
             }
 
-            $params = array_translate($row, $spec);
-            $stmt->execute($params);
+            $stmt->execute($row);
             $count += $stmt->rowCount();
         }
 
@@ -785,7 +779,7 @@ class MySqlDb extends Db {
      * {@inheritdoc}
      */
     public function update($tableName, array $set, array $where, array $options = []) {
-        $sql = $this->buildUpdate($tableName, $set, $where, true, $options);
+        $sql = $this->buildUpdate($tableName, $set, $where, $options);
         $result = $this->query($sql, Db::QUERY_WRITE);
 
         if ($result instanceof \PDOStatement) {
@@ -801,11 +795,10 @@ class MySqlDb extends Db {
      * @param string $tableName The name of the table to update.
      * @param array $set An array of columns to set.
      * @param array $where The where filter.
-     * @param bool $quoteVals Whether or not to quote the values.
      * @param array $options Additional options for the query.
      * @return string Returns the update statement as a string.
      */
-    protected function buildUpdate($tableName, array $set, array $where, $quoteVals = true, array $options = []) {
+    protected function buildUpdate($tableName, array $set, array $where, array $options = []) {
         $sql = 'update '.
             (self::val(Db::OPTION_IGNORE, $options) ? 'ignore ' : '').
             $this->backtick($this->px.$tableName).
@@ -813,12 +806,12 @@ class MySqlDb extends Db {
 
         $parts = [];
         foreach ($set as $key => $value) {
-            $parts[] = $this->backtick($key).' = '.$this->quoteVal($value, $quoteVals);
+            $parts[] = $this->backtick($key).' = '.$this->quoteVal($value);
         }
         $sql .= implode(",\n  ", $parts);
 
         if (!empty($where)) {
-            $sql .= "\nwhere ".$this->buildWhere($where, Db::OP_AND, $quoteVals);
+            $sql .= "\nwhere ".$this->buildWhere($where, Db::OP_AND);
         }
 
         return $sql;
@@ -882,9 +875,9 @@ class MySqlDb extends Db {
      * @return string Returns a string representing the column definition.
      */
     protected function columnDefString($name, array $def) {
-        $result = $this->backtick($name).' '.$this->columnTypeString($def['type']);
+        $result = $this->backtick($name).' '.$this->columnTypeString($def['dbtype']);
 
-        if (self::val('required', $def)) {
+        if (!self::val('allowNull', $def)) {
             $result .= ' not null';
         }
 
@@ -892,7 +885,7 @@ class MySqlDb extends Db {
             $result .= ' default '.$this->quoteVal($def['default']);
         }
 
-        if (self::val('autoincrement', $def)) {
+        if (self::val('autoIncrement', $def)) {
             $result .= ' auto_increment';
         }
 
