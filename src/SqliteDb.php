@@ -410,7 +410,7 @@ class SqliteDb extends MySqlDb {
     protected function getTableNames() {
         // Get the table names.
         $tables = (array)$this->get(
-            new Escaped('sqlite_master'),
+            new Identifier('sqlite_master'),
             [
                 'type' => 'table',
                 'name' => [Db::OP_LIKE => $this->escapeLike($this->getPx()).'%']

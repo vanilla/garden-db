@@ -516,14 +516,16 @@ abstract class Db {
     /**
      * Prefix a table name.
      *
-     * @param string $table The name of the table to prefix.
+     * @param string|Identifier $table The name of the table to prefix.
+     * @param bool $escape Whether or not to escape the output.
      * @return string Returns a full table name.
      */
-    protected function prefixTable($table) {
-        if ($table instanceof Literal) {
-            return $table->getValue($this);
+    protected function prefixTable($table, $escape = true) {
+        if ($table instanceof Identifier) {
+            return $escape ? $table->escape($this) : (string)$table;
         } else {
-            return $this->escape($this->px.$table);
+            $table = $this->px.$table;
+            return $escape ? $this->escape($table) : $table;
         }
     }
 

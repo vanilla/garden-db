@@ -575,14 +575,14 @@ class MySqlDb extends Db {
     }
 
     /**
-     * Get the all of tablenames in the database.
+     * Get the all of table names in the database.
      *
      * @return array Returns an array of table names with prefixes stripped.
      */
     protected function getTableNames() {
         // Get the table names.
         $tables = (array)$this->get(
-            new Escaped('information_schema', 'TABLES'),
+            new Identifier('information_schema', 'TABLES'),
             [
                 'TABLE_SCHEMA' => $this->getDbName(),
                 'TABLE_NAME' => [Db::OP_LIKE => $this->escapeLike($this->getPx()).'%']
