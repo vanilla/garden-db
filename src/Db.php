@@ -59,7 +59,7 @@ abstract class Db {
     /**
      * @var string The database prefix.
      */
-    protected $px = '';
+    private $px = '';
 
     /**
      * @var int The query execution mode.
@@ -83,7 +83,7 @@ abstract class Db {
     /**
      * @var \PDO
      */
-    protected $pdo;
+    private $pdo;
 
     /**
      * Initialize an instance of the {@link MySqlDb} class.
@@ -126,11 +126,11 @@ abstract class Db {
     /**
      * Get a table definition.
      *
-     * @param string $tableName The name of the table.
+     * @param string $table The name of the table.
      * @return array|null Returns the table definition or null if the table does not exist.
      */
-    public function getTableDef($tableName) {
-        $ltablename = strtolower($tableName);
+    public function getTableDef($table) {
+        $ltablename = strtolower($table);
 
         // Check to see if the table isn't in the cache first.
         if ($this->allTablesFetched & Db::FETCH_TABLENAMES &&
@@ -501,6 +501,30 @@ abstract class Db {
             return $identifier->getValue($this);
         }
         return '`'.str_replace('`', '``', $identifier).'`';
+    }
+
+    /**
+     * Escape a a like string so that none of its characters work as wildcards.
+     *
+     * @param string $str The string to escape.
+     * @return string Returns an escaped string.
+     */
+    protected function escapeLike($str) {
+        return addcslashes($str, '_%');
+    }
+
+    /**
+     * Prefix a table name.
+     *
+     * @param string $table The name of the table to prefix.
+     * @return string Returns a full table name.
+     */
+    protected function prefixTable($table) {
+        if ($table instanceof Literal) {
+            return $table->getValue($this);
+        } else {
+            return $this->escape($this->px.$table);
+        }
     }
 
     /**

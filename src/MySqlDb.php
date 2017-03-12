@@ -37,7 +37,7 @@ class MySqlDb extends Db {
     public function dropTable($tableName, array $options = []) {
         $sql = 'drop table '.
             (self::val(Db::OPTION_IGNORE, $options) ? 'if exists ' : '').
-            $this->escape($this->px.$tableName);
+            $this->prefixTable($tableName);
         $result = $this->query($sql, Db::QUERY_DEFINE);
         unset($this->tables[strtolower($tableName)]);
 
@@ -111,30 +111,30 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    public function getTableDef($tableName) {
-        $table = parent::getTableDef($tableName);
-        if ($table || $table === null) {
-            return $table;
+    public function getTableDef($table) {
+        $tableDef = parent::getTableDef($table);
+        if ($tableDef || $tableDef === null) {
+            return $tableDef;
         }
 
-        $ltablename = strtolower($tableName);
-        $table = self::val($ltablename, $this->tables, []);
-        if (!isset($table['columns'])) {
-            $columns = $this->getColumns($tableName);
+        $ltablename = strtolower($table);
+        $tableDef = self::val($ltablename, $this->tables, []);
+        if (!isset($tableDef['columns'])) {
+            $columns = $this->getColumns($table);
             if ($columns === null) {
                 // A table with no columns does not exist.
-                $this->tables[$ltablename] = ['name' => $tableName];
+                $this->tables[$ltablename] = ['name' => $table];
                 return null;
             }
 
-            $table['columns'] = $columns;
+            $tableDef['columns'] = $columns;
         }
-        if (!isset($table['indexes'])) {
-            $table['indexes'] = $this->getIndexes($tableName);
+        if (!isset($tableDef['indexes'])) {
+            $tableDef['indexes'] = $this->getIndexes($table);
         }
-        $table['name'] = $tableName;
-        $this->tables[$ltablename] = $table;
-        return $table;
+        $tableDef['name'] = $table;
+        $this->tables[$ltablename] = $tableDef;
+        return $tableDef;
     }
 
     /**
@@ -150,7 +150,7 @@ class MySqlDb extends Db {
             new Literal('information_schema.COLUMNS'),
             [
                 'TABLE_SCHEMA' => $this->getDbName(),
-                'TABLE_NAME' => $tableName ? $this->px.$tableName : [Db::OP_LIKE => addcslashes($this->px, '_%').'%']
+                'TABLE_NAME' => $tableName ? $this->getPx().$tableName : [Db::OP_LIKE => $this->escapeLike($this->getPx()).'%']
             ],
             [
                 'columns' => [
@@ -171,7 +171,7 @@ class MySqlDb extends Db {
         $tablecolumns = $stmt->fetchAll(PDO::FETCH_ASSOC | PDO::FETCH_GROUP);
 
         foreach ($tablecolumns as $ctablename => $cdefs) {
-            $ctablename = strtolower(ltrim_substr($ctablename, $this->px));
+            $ctablename = strtolower(ltrim_substr($ctablename, $this->getPx()));
             $columns = [];
 
             foreach ($cdefs as $cdef) {
@@ -236,7 +236,7 @@ class MySqlDb extends Db {
         if ($tableName instanceof Literal) {
             $tableName = $tableName->getValue($this);
         } else {
-            $tableName = $this->escape($this->px.$tableName);
+            $tableName = $this->prefixTable($tableName);
         }
         $sql .= "\nfrom $tableName";
 
@@ -355,7 +355,7 @@ class MySqlDb extends Db {
                                 break;
                             case Db::OP_IN:
                                 // Quote the in values.
-                                $rval = array_map(array($this->pdo, 'quote'), (array)$rval);
+                                $rval = array_map([$this, 'quote'], (array)$rval);
                                 $result .= "$btcolumn in (".implode(', ', $rval).')';
                                 break;
                             case Db::OP_NEQ:
@@ -432,7 +432,7 @@ class MySqlDb extends Db {
      */
     private function getDbName() {
         if (!isset($this->dbname)) {
-            $this->dbname = $this->pdo->query('select database()')->fetchColumn();
+            $this->dbname = $this->getPDO()->query('select database()')->fetchColumn();
         }
         return $this->dbname;
     }
@@ -500,7 +500,7 @@ class MySqlDb extends Db {
             new Literal('information_schema.STATISTICS'),
             [
                 'TABLE_SCHEMA' => $this->getDbName(),
-                'TABLE_NAME' => $tableName ? $this->px.$tableName : [Db::OP_LIKE => addcslashes($this->px, '_%').'%']
+                'TABLE_NAME' => $tableName ? $this->getPx().$tableName : [Db::OP_LIKE => $this->escapeLike($this->getPx()).'%']
             ],
             [
                 'columns' => [
@@ -519,7 +519,7 @@ class MySqlDb extends Db {
 
         foreach ($indexDefs as $indexName => $indexRows) {
             $row = reset($indexRows);
-            $itablename = strtolower(ltrim_substr($row['TABLE_NAME'], $this->px));
+            $itablename = strtolower(ltrim_substr($row['TABLE_NAME'], $this->getPx()));
             $index = [
                 'name' => $indexName,
                 'columns' => array_column($indexRows, 'COLUMN_NAME')
@@ -582,10 +582,10 @@ class MySqlDb extends Db {
     protected function getTableNames() {
         // Get the table names.
         $tables = (array)$this->get(
-            new Literal('information_schema.TABLES'),
+            new Escaped('information_schema', 'TABLES'),
             [
                 'TABLE_SCHEMA' => $this->getDbName(),
-                'TABLE_NAME' => [Db::OP_LIKE => addcslashes($this->px, '_%').'%']
+                'TABLE_NAME' => [Db::OP_LIKE => $this->escapeLike($this->getPx()).'%']
             ],
             [
                 'columns' => ['TABLE_NAME']
@@ -594,7 +594,7 @@ class MySqlDb extends Db {
 
         // Strip the table prefixes.
         $tables = array_map(function ($name) {
-            return ltrim_substr($name, $this->px);
+            return ltrim_substr($name, $this->getPx());
         }, array_column($tables, 'TABLE_NAME'));
 
         return $tables;
@@ -617,7 +617,7 @@ class MySqlDb extends Db {
     /**
      * Build an insert statement.
      *
-     * @param string $tableName The name of the table to insert to.
+     * @param string|Literal $tableName The name of the table to insert to.
      * @param array $row The row to insert.
      * @param array $options An array of options for the insert. See {@link Db::insert} for the options.
      * @return string Returns the the sql string of the insert statement.
@@ -632,7 +632,7 @@ class MySqlDb extends Db {
         } else {
             $sql = 'insert ';
         }
-        $sql .= $this->escape($this->px.$tableName);
+        $sql .= $this->prefixTable($tableName);
 
         // Add the list of values.
         $sql .=
@@ -726,7 +726,7 @@ class MySqlDb extends Db {
     /**
      * Build a sql update statement.
      *
-     * @param string $tableName The name of the table to update.
+     * @param string|Literal $tableName The name of the table to update.
      * @param array $set An array of columns to set.
      * @param array $where The where filter.
      * @param array $options Additional options for the query.
@@ -735,7 +735,7 @@ class MySqlDb extends Db {
     protected function buildUpdate($tableName, array $set, array $where, array $options = []) {
         $sql = 'update '.
             (self::val(Db::OPTION_IGNORE, $options) ? 'ignore ' : '').
-            $this->escape($this->px.$tableName).
+            $this->prefixTable($tableName).
             "\nset\n  ";
 
         $parts = [];
@@ -761,9 +761,9 @@ class MySqlDb extends Db {
             if (!empty($where)) {
                 throw new \InvalidArgumentException("You cannot truncate $tableName with a where filter.", 500);
             }
-            $sql = 'truncate table '.$this->escape($this->px.$tableName);
+            $sql = 'truncate table '.$this->prefixTable($tableName);
         } else {
-            $sql = 'delete from '.$this->escape($this->px.$tableName);
+            $sql = 'delete from '.$this->prefixTable($tableName);
 
             if (!empty($where)) {
                 $sql .= "\nwhere ".$this->buildWhere($where);
@@ -791,7 +791,7 @@ class MySqlDb extends Db {
             }
         }
 
-        $fullTablename = $this->escape($this->px.$tableName);
+        $fullTablename = $this->prefixTable($tableName);
         $sql = "create table $fullTablename (\n  ".
             implode(",\n  ", $parts).
             "\n)";
@@ -890,7 +890,7 @@ class MySqlDb extends Db {
 
         $sql = 'alter '.
             (self::val(Db::OPTION_IGNORE, $options) ? 'ignore ' : '').
-            'table '.$this->escape($this->px.$tablename)."\n  ".
+            'table '.$this->prefixTable($tablename)."\n  ".
             implode(",\n  ", $parts);
 
         $result = $this->query($sql, Db::QUERY_DEFINE);

@@ -13,35 +13,17 @@ namespace Garden\Db;
 class Escaped extends Literal {
     private $identifier;
 
-    public function __construct($identifier) {
+    public function __construct(...$identifier) {
+        if (empty($identifier)) {
+            throw new \InvalidArgumentException("The identifier cannot be empty.", 500);
+        }
         $this->identifier = $identifier;
         parent::__construct('%s');
     }
 
     public function getValue(Db $db, ...$args) {
-        $args = [$db->escape($this->identifier)];
+        $escaped = implode('.', array_map([$db, 'escape'], $this->identifier));
 
-
-        return parent::getValue($db, ...$args);
-    }
-
-    /**
-     * Get the identifier.
-     *
-     * @return array|string Returns the identifier.
-     */
-    public function getIdentifier() {
-        return $this->identifier;
-    }
-
-    /**
-     * Set the identifier.
-     *
-     * @param array|string $identifier
-     * @return $this
-     */
-    public function setIdentifier($identifier) {
-        $this->identifier = $identifier;
-        return $this;
+        return parent::getValue($db, $escaped);
     }
 }

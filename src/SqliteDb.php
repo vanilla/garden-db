@@ -57,7 +57,7 @@ class SqliteDb extends MySqlDb {
         $columns = array_keys(array_intersect_key($tableDef['columns'], $currentDef['columns']));
 
         // Build the insert/select statement.
-        $sql = 'insert into '.$this->escape($this->px.$tablename)."\n".
+        $sql = 'insert into '.$this->prefixTable($tablename)."\n".
             $this->bracketList($columns, '`')."\n".
             $this->buildSelect($tmpTablename, [], ['columns' => $columns]);
 
@@ -75,9 +75,9 @@ class SqliteDb extends MySqlDb {
      */
     private function renameTable($oldname, $newname) {
         $renameSql = 'alter table '.
-            $this->escape($this->px.$oldname).
+            $this->prefixTable($oldname).
             ' rename to '.
-            $this->escape($this->px.$newname);
+            $this->prefixTable($newname);
         $this->query($renameSql, Db::QUERY_WRITE);
     }
 
@@ -121,7 +121,7 @@ class SqliteDb extends MySqlDb {
         } else {
             $sql = 'insert into ';
         }
-        $sql .= $this->escape($this->px.$tableName);
+        $sql .= $this->prefixTable($tableName);
 
         // Add the list of values.
         $sql .=
@@ -144,7 +144,7 @@ class SqliteDb extends MySqlDb {
     protected function buildUpdate($tableName, array $set, array $where, array $options = []) {
         $sql = 'update '.
             (self::val(Db::OPTION_IGNORE, $options) ? 'or ignore ' : '').
-            $this->escape($this->px.$tableName).
+            $this->prefixTable($tableName).
             "\nset\n  ";
 
         $parts = [];
@@ -223,7 +223,7 @@ class SqliteDb extends MySqlDb {
             $parts[] = 'primary key '.$this->bracketList($pkIndex['columns'], '`');
         }
 
-        $fullTablename = $this->escape($this->px.$tablename);
+        $fullTablename = $this->prefixTable($tablename);
         $sql = "create table $fullTablename (\n  ".
             implode(",\n  ", $parts).
             "\n)";
@@ -252,7 +252,7 @@ class SqliteDb extends MySqlDb {
             (self::val(Db::OPTION_IGNORE, $options) ? 'if not exists ' : '').
             $this->buildIndexName($tablename, $indexDef).
             ' on '.
-            $this->escape($this->px.$tablename).
+            $this->prefixTable($tablename).
             $this->bracketList($indexDef['columns'], '`');
 
         $this->query($sql, Db::QUERY_DEFINE);
@@ -295,7 +295,7 @@ class SqliteDb extends MySqlDb {
             }
         }
 
-        $cdefs = (array)$this->query('pragma table_info('.$this->quote($this->px.$tableName).')');
+        $cdefs = (array)$this->query('pragma table_info('.$this->quote($this->getPx().$tableName).')');
         if (empty($cdefs)) {
             return null;
         }
@@ -354,7 +354,7 @@ class SqliteDb extends MySqlDb {
             $this->tables[$tableName]['indexes'][Db::INDEX_PK] = $pk;
         }
 
-        $indexInfos = (array)$this->query('pragma index_list('.$this->quote($this->px.$tableName).')');
+        $indexInfos = (array)$this->query('pragma index_list('.$this->prefixTable($tableName).')');
         foreach ($indexInfos as $row) {
             $indexName = $row['name'];
             if ($row['unique']) {
@@ -413,7 +413,7 @@ class SqliteDb extends MySqlDb {
             new Escaped('sqlite_master'),
             [
                 'type' => 'table',
-                'name' => [Db::OP_LIKE => addcslashes($this->px, '_%').'%']
+                'name' => [Db::OP_LIKE => $this->escapeLike($this->getPx()).'%']
             ],
             [
                 'columns' => ['name']
@@ -428,7 +428,7 @@ class SqliteDb extends MySqlDb {
 
         // Strip the table prefixes.
         $tables = array_map(function ($name) {
-            return ltrim_substr($name, $this->px);
+            return ltrim_substr($name, $this->getPx());
         }, $tables);
 
         return $tables;
