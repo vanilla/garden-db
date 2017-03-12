@@ -157,10 +157,11 @@ abstract class Db {
      * @param array $options An array of additional options when adding the table.
      */
     public function defineTable(array $tableDef, array $options = []) {
+        $options += [Db::OPTION_DROP => false, 'columns' => []];
+
         $tableName = $tableDef['name'];
         $lTableName = strtolower($tableName);
         $tableDef['name'] = $tableName;
-        $drop = self::val(Db::OPTION_DROP, $options, false);
         $curTable = $this->getTableDef($tableName);
 
         $this->fixIndexes($tableName, $tableDef, $curTable);
@@ -174,17 +175,17 @@ abstract class Db {
         $alterDef = ['name' => $tableName];
 
         // Figure out the columns that have changed.
-        $curColumns = (array)self::val('columns', $curTable, []);
-        $newColumns = (array)self::val('columns', $tableDef, []);
+        $curColumns = (array)$curTable['columns'];
+        $newColumns = (array)$tableDef['columns'];
 
         $alterDef['add']['columns'] = array_diff_key($newColumns, $curColumns);
         $alterDef['alter']['columns'] = array_uintersect_assoc($newColumns, $curColumns, function ($new, $curr) {
-            // Return 0 if the values are different, not the same.
-            if (self::val('dbtype', $curr) !== self::val('dbtype', $new) ||
-                self::val('allowNull', $curr) !== self::val('allowNull', $new) ||
-                self::val('default', $curr) !== self::val('default', $new)
-            ) {
-                return 0;
+            $search = ['dbtype', 'allowNull', 'default'];
+            foreach ($search as $key) {
+                if (self::val($key, $curr) !== self::val($key, $new)) {
+                    // Return 0 if the values are different, not the same.
+                    return 0;
+                }
             }
             return 1;
         });
@@ -196,7 +197,7 @@ abstract class Db {
         $alterDef['add']['indexes'] = array_udiff($newIndexes, $curIndexes, [$this, 'indexCompare']);
 
         $dropIndexes = array_udiff($curIndexes, $newIndexes, [$this, 'indexCompare']);
-        if ($drop) {
+        if ($options[Db::OPTION_DROP]) {
             $alterDef['drop']['columns'] = array_diff_key($curColumns, $newColumns);
             $alterDef['drop']['indexes'] = $dropIndexes;
         } else {
@@ -237,21 +238,22 @@ abstract class Db {
      * defined on the columns themselves.
      */
     private function fixIndexes($tableName, array &$tableDef, $curTableDef = null) {
+        $tableDef += ['indexes' => []];
+
         // Loop through the columns and add get the primary key index.
         $primaryColumns = [];
         foreach ($tableDef['columns'] as $cname => $cdef) {
-            if (self::val('primary', $cdef)) {
+            if (!empty($cdef['primary'])) {
                 $primaryColumns[] = $cname;
             }
         }
 
         // Massage the primary key index.
         $primaryFound = false;
-        array_touch('indexes', $tableDef, []);
         foreach ($tableDef['indexes'] as &$indexDef) {
-            array_touch('name', $indexDef, $this->buildIndexName($tableName, $indexDef));
+            $indexDef += ['name' => $this->buildIndexName($tableName, $indexDef), 'type' => null];
 
-            if (self::val('type', $indexDef) === Db::INDEX_PK) {
+            if ($indexDef['type'] === Db::INDEX_PK) {
                 $primaryFound = true;
 
                 if (empty($primaryColumns)) {
@@ -420,13 +422,15 @@ abstract class Db {
      * @return string Returns the index name.
      */
     protected function buildIndexName($tableName, array $indexDef) {
-        $type = self::val('type', $indexDef, Db::INDEX_IX);
+        $indexDef += ['type' => Db::INDEX_IX, 'suffix' => ''];
+
+        $type = $indexDef['type'];
 
         if ($type === Db::INDEX_PK) {
             return 'primary';
         }
         $px = self::val($type, [Db::INDEX_IX => 'ix_', Db::INDEX_UNIQUE => 'ux_'], 'ix_');
-        $sx = self::val('suffix', $indexDef);
+        $sx = $indexDef['suffix'];
         $result = $px.$tableName.'_'.($sx ?: implode('', $indexDef['columns']));
         return $result;
     }
@@ -486,20 +490,6 @@ function ltrim_substr($mainstr, $substr) {
         return substr($mainstr, strlen($substr));
     }
     return $mainstr;
-}
-
-/**
- * Make sure that a key exists in an array.
- *
- * @param string|int $key The array key to ensure.
- * @param array &$array The array to modify.
- * @param mixed $default The default value to set if key does not exist.
- * @category Array Functions
- */
-function array_touch($key, &$array, $default) {
-    if (!array_key_exists($key, $array)) {
-        $array[$key] = $default;
-    }
 }
 
 /**
