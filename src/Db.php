@@ -48,8 +48,58 @@ abstract class Db {
         'sqlite' => SqliteDb::class
     ];
 
+    /**
+     * @var array The canonical database types.
+     */
     private static $types = [
+        // String
+        'char' => ['type' => 'string', 'length' => true],
+        'varchar' => ['type' => 'string', 'length' => true],
+        'tinytext' => ['type' => 'string', 'schema' => ['maxLength' => 255]],
+        'text' => ['type' => 'string', 'schema' => ['maxLength' =>  65535]],
+        'mediumtext' => ['type' => 'string', 'schema' => ['maxLength' => 16777215]],
+        'longtext' => ['type' => 'string', 'schema' => ['maxLength' => 4294967295]],
+        'binary' => ['type' => 'string', 'length' => true],
+        'varbinary' => ['type' => 'string', 'length' => true],
 
+        // Boolean
+        'bool' => ['type' => 'boolean'],
+
+        // Integer
+        'byte' => ['type' => 'integer', 'schema' => ['maximum' => 127, 'minimum' => -128]],
+        'short' => ['type' => 'integer', 'schema' => ['maximum' => 32767, 'minimum' => -32768]],
+        'int' => ['type' => 'integer', 'schema' => ['maximum' => 2147483647, 'minimum' => -2147483648]],
+        'long' => ['type' => 'integer'],
+
+        // Number
+        'float' => ['type' => 'number'],
+        'double' => ['type' => 'number'],
+        'decimal' => ['type' => 'number', 'precision' => true],
+        'numeric' => ['type' => 'number', 'precision' => true],
+
+        // Date/Time
+        'datetime' => ['type' => 'datetime'],
+        'timestamp' => ['type' => 'datetime'],
+
+        // Enum
+        'enum' => ['type' => 'string', 'enum' => true],
+
+        // Schema types
+        'string' => 'varchar',
+        'boolean' => 'bool',
+        'integer' => 'int',
+        'number' => 'float',
+
+        // Other aliases
+        'character' => 'char',
+        'tinyint' => 'byte',
+        'int8' => 'byte',
+        'smallint' => 'short',
+        'int16' => 'short',
+        'int32' => 'int',
+        'bigint' => 'long',
+        'int64' => 'long',
+        'real' => 'double'
     ];
 
     /**
@@ -161,6 +211,7 @@ abstract class Db {
 
         $names = $this->getTableNamesDb();
 
+        $this->tableNames = [];
         foreach ($names as $name) {
             $name = $this->stripPrefix($name);
             $this->tableNames[strtolower($name)] = $name;
@@ -245,6 +296,111 @@ abstract class Db {
      * @return array|null
      */
     abstract protected function getColumnDefsDb($table);
+
+    /**
+     * Get the canonical type based on a type string.
+     *
+     * @param string $type A type string.
+     * @return array|null Returns the type schema array or **null** if a type isn't found.
+     */
+    public function getType($type) {
+        // Remove brackets from the type.
+        $brackets = null;
+        if (preg_match('`^(.*)\((.*)\)$`', $type, $m)) {
+            $brackets = $m[2];
+            $type = $m[1];
+        }
+
+        // Check for the unsigned signifier.
+        $unsigned = null;
+        if ($type[0] === 'u') {
+            $unsigned = true;
+            $type = substr($type, 1);
+        }
+
+        // Look for the type.
+        $type = strtolower($type);
+        if (isset(self::$types[$type])) {
+            $dbtype = $type;
+            $row = self::$types[$type];
+
+            // Resolve an alias.
+            if (is_string($row)) {
+                $row = self::$types[$row];
+            }
+        } else {
+            return null;
+        }
+
+        // Now that we have a type row we can build a schema for it.
+        $schema = [
+            'type' => $row['type'],
+            'dbtype' => $dbtype
+        ];
+
+        if (!empty($row['schema'])) {
+            $schema += $row['schema'];
+        }
+
+        if ($row['type'] === 'integer' && $unsigned) {
+            $schema['unsigned'] = true;
+
+            if (!empty($schema['maximum'])) {
+                $schema['maximum'] = $schema['maximum'] * 2 + 1;
+                $schema['minimum'] = 0;
+            }
+        }
+
+        if (!empty($row['length'])) {
+            $schema['maxLength'] = (int)$brackets ?: 255;
+        }
+
+        if (!empty($row['precision'])) {
+            $parts = array_map('trim', explode(',', $brackets));
+            $schema['precision'] = (int)$parts[0];
+            if (isset($parts[1])) {
+                $schema['scale'] = (int)$parts[1];
+            }
+        }
+
+        if (!empty($row['enum'])) {
+            $enum = explode(',', $brackets);
+            $schema['enum'] = array_map(function ($str) {
+                return trim($str, "'\" \t\n\r\0\x0B");
+            }, $enum);
+        }
+
+        return $schema;
+    }
+
+    /**
+     * Get the native database type based on a type schema.
+     *
+     * The default implementation of this method returns the canonical db types. Individual database classes will have
+     * to override to provide any differences.
+     *
+     * @param array $type The type schema.
+     * @return string
+     */
+    protected function getNativeDbType(array $type) {
+        $dbtype = $type['dbtype'];
+
+        if (!empty($type['maxLength'])) {
+            $dbtype .= "({$type['maxLength']})";
+        } elseif (!empty($type['unsigned'])) {
+            $dbtype = 'u'.$dbtype;
+        } elseif (!empty($type['precision'])) {
+            $dbtype .= "({$type['precision']}";
+            if (!empty($type['scale'])) {
+                $dbtype .= ",{$type['scale']}";
+            }
+            $dbtype .= ')';
+        } elseif (!empty($type['enum'])) {
+            $parts = array_map([$this, 'quote'], $type['enum']);
+            $dbtype .= '('.implode(',', $parts).')';
+        }
+        return $dbtype;
+    }
 
     /**
      * Set a table definition to the database.
@@ -764,66 +920,13 @@ abstract class Db {
     }
 
     /**
-     * Set the defaultFetchMode.
+     * Set the default fetch mode..
      *
-     * @param array $mode
+     * @param array $mode This should be arguments compatible with {@link PDO::setFetchMode()}.
      * @return $this
      */
     public function setDefaultFetchMode(...$mode) {
         $this->defaultFetchMode = $mode;
         return $this;
     }
-}
-
-/**
- * Strip a substring from the beginning of a string.
- *
- * @param string $mainstr The main string to look at (the haystack).
- * @param string $substr The substring to search trim (the needle).
- * @return string
- *
- * @category String Functions
- */
-function ltrim_substr($mainstr, $substr) {
-    if (strncasecmp($mainstr, $substr, strlen($substr)) === 0) {
-        return substr($mainstr, strlen($substr));
-    }
-    return $mainstr;
-}
-
-/**
- * Search an array for a value with a user-defined comparison function.
- *
- * @param mixed $needle The value to search for.
- * @param array $haystack The array to search.
- * @param callable $cmp The comparison function to use in the search.
- * @return mixed|false Returns the found value or false if the value is not found.
- */
-function array_usearch($needle, array $haystack, callable $cmp) {
-    $found = array_uintersect($haystack, [$needle], $cmp);
-
-    if (empty($found)) {
-        return false;
-    } else {
-        return array_pop($found);
-    }
-}
-
-/**
- * Converts a quick array into a key/value form.
- *
- * @param array $array The array to work on.
- * @param mixed $default The default value for unspecified keys.
- * @return array Returns the array converted to long syntax.
- */
-function array_quick(array $array, $default) {
-    $result = [];
-    foreach ($array as $key => $value) {
-        if (is_int($key)) {
-            $result[$value] = $default;
-        } else {
-            $result[$key] = $value;
-        }
-    }
-    return $result;
 }
