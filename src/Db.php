@@ -43,6 +43,10 @@ abstract class Db {
     const ORDER_ASC = 'asc';
     const ORDER_DESC = 'desc';
 
+    private static $types = [
+
+    ];
+
     /**
      * @var string The database prefix.
      */
@@ -800,83 +804,4 @@ function array_quick(array $array, $default) {
         }
     }
     return $result;
-}
-
-/**
- * Force a value into a boolean.
- *
- * @param mixed $value The value to force.
- * @return boolean Returns the boolean value of {@link $value}.
- * @category Type Functions
- */
-function force_bool($value) {
-    if (is_string($value)) {
-        switch (strtolower($value)) {
-            case 'disabled':
-            case 'false':
-            case 'no':
-            case 'off':
-            case '':
-                return false;
-        }
-        return true;
-    }
-    return (bool)$value;
-}
-
-/**
- * Return the value from an associative array.
- *
- * This function differs from val() in that $key can be an array that will be used to walk a nested array.
- *
- * @param array|string $keys The keys or property names of the value. This can be an array or dot-seperated string.
- * @param array|object $array The array or object to search.
- * @param mixed $default The value to return if the key does not exist.
- * @return mixed The value from the array or object.
- * @category Array Functions
- */
-function valr($keys, $array, $default = null) {
-    if (is_string($keys)) {
-        $keys = explode('.', $keys);
-    }
-
-    $value = $array;
-    for ($i = 0; $i < count($keys); ++$i) {
-        $SubKey = $keys[$i];
-
-        if (is_array($value) && isset($value[$SubKey])) {
-            $value = $value[$SubKey];
-        } elseif (is_object($value) && isset($value->$SubKey)) {
-            $value = $value->$SubKey;
-        } else {
-            return $default;
-        }
-    }
-    return $value;
-}
-
-/**
- * Force a value to be an integer.
- *
- * @param mixed $value The value to force.
- * @return int Returns the integer value of {@link $value}.
- * @category Type Functions
- */
-function force_int($value) {
-    if (is_string($value)) {
-        switch (strtolower($value)) {
-            case 'disabled':
-            case 'false':
-            case 'no':
-            case 'off':
-            case '':
-                return 0;
-            case 'enabled':
-            case 'true':
-            case 'yes':
-            case 'on':
-                return 1;
-        }
-    }
-    return intval($value);
 }

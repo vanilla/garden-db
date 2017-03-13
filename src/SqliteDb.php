@@ -198,10 +198,14 @@ class SqliteDb extends MySqlDb {
                 $result .= ' primary key autoincrement';
                 $def['primary'] = true;
 //            }
-        } elseif (isset($def['default'])) {
-            $result .= ' default '.$this->quote($def['default']);
-        } elseif (!$def['allowNull']) {
-            $result .= ' not null';
+        } else {
+            if (!$def['allowNull']) {
+                $result .= ' not null';
+            }
+
+            if (isset($def['default'])) {
+                $result .= ' default '.$this->quote($def['default']);
+            }
         }
 
         return $result;
@@ -283,10 +287,10 @@ class SqliteDb extends MySqlDb {
             return null;
         } elseif (in_array($type, ['int', 'integer', 'tinyint', 'smallint',
             'mediumint', 'bigint', 'unsigned big int', 'int2', 'int8', 'boolean'])) {
-            return force_int($value);
+            return (int)filter_var($value, FILTER_VALIDATE_INT);
         } elseif (in_array($type, ['real', 'double', 'double precision', 'float',
             'numeric', 'decimal(10,5)'])) {
-            return floatval($value);
+            return filter_var($value, FILTER_VALIDATE_FLOAT);
         } else {
             return (string)$value;
         }
@@ -309,8 +313,9 @@ class SqliteDb extends MySqlDb {
         foreach ($cdefs as $cdef) {
             $column = [
                 'dbtype' => $this->columnTypeString($cdef['type']),
-                'allowNull' => !force_bool($cdef['notnull'])//, FILTER_VALIDATE_BOOLEAN),
+                'allowNull' => !filter_var($cdef['notnull'], FILTER_VALIDATE_BOOLEAN)
             ];
+
             if ($cdef['pk']) {
                 $pk[] = $cdef['name'];
                 if (strcasecmp($cdef['type'], 'integer') === 0) {
