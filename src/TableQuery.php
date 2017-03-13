@@ -34,17 +34,7 @@ class TableQuery implements DatasetInterface, \IteratorAggregate {
     /**
      * @var array
      */
-    private $order = [];
-
-    /**
-     * @var int
-     */
-    private $offset = 0;
-
-    /**
-     * @var int
-     */
-    private $limit;
+    private $options;
 
     /**
      * @var callable
@@ -74,17 +64,17 @@ class TableQuery implements DatasetInterface, \IteratorAggregate {
      * @return array Returns the order.
      */
     public function getOrder() {
-        return $this->order;
+        return $this->getOption('order', []);
     }
 
     /**
      * Set the order.
      *
-     * @param array|string $order
+     * @param string[] $columns The column names to order by.
      * @return $this
      */
-    public function setOrder($order) {
-        $this->order = (array)$order;
+    public function setOrder(...$columns) {
+        $this->options['order'] = (array)$columns;
         return $this;
     }
 
@@ -94,7 +84,7 @@ class TableQuery implements DatasetInterface, \IteratorAggregate {
      * @return int Returns the offset.
      */
     public function getOffset() {
-        return $this->offset;
+        return $this->getOption('offset', 0);
     }
 
     /**
@@ -104,7 +94,7 @@ class TableQuery implements DatasetInterface, \IteratorAggregate {
      * @return $this
      */
     public function setOffset($offset) {
-        $this->offset = $offset;
+        $this->options['offset'] = $offset;
         return $this;
     }
 
@@ -114,7 +104,7 @@ class TableQuery implements DatasetInterface, \IteratorAggregate {
      * @return int Returns the limit.
      */
     public function getLimit() {
-        return $this->limit;
+        return $this->getOption('limit', 10);
     }
 
     /**
@@ -124,7 +114,7 @@ class TableQuery implements DatasetInterface, \IteratorAggregate {
      * @return $this
      */
     public function setLimit($limit) {
-        $this->limit = $limit;
+        $this->options['limit'] = $limit;
         return $this;
     }
 
@@ -142,13 +132,17 @@ class TableQuery implements DatasetInterface, \IteratorAggregate {
     }
 
     public function getPage() {
-        $result = intdiv($this->offset, $this->limit) + 1;
+        $result = intdiv($this->getOffset(), (int)$this->getLimit()) + 1;
         return $result;
     }
 
     public function setPage($page) {
-        $this->offset = ($page - 1) * $this->limit;
+        $this->setOffset(($page - 1) * $this->getLimit());
         return $this;
+    }
+
+    protected function getOption($name, $default = null) {
+        return isset($this->options[$name]) ? $this->options[$name] : $default;
     }
 
     /**
@@ -167,13 +161,7 @@ class TableQuery implements DatasetInterface, \IteratorAggregate {
      * @return mixed
      */
     private function query() {
-        $options = [
-            'limit' => $this->getLimit(),
-            'offset' => $this->getOffset(),
-            'order' => $this->getOrder()
-        ];
-
-        $result = $this->db->get($this->table, $this->where, $options)->fetchAll(PDO::FETCH_ASSOC);
+        $result = $this->db->get($this->table, $this->where, $this->options)->fetchAll(PDO::FETCH_ASSOC);
         if (isset($this->calculator)) {
             array_walk($result, $this->calculator);
         }

@@ -200,4 +200,13 @@ class TableDef implements \JsonSerializable {
             'indexes' => $this->indexes
         ];
     }
+
+    /**
+     * Execute this table definition on a database.
+     *
+     * @param Db $db The database to query.
+     */
+    public function exec(Db $db) {
+        $db->defineTable($this->toArray());
+    }
 }

@@ -18,5 +18,5 @@ interface DatasetInterface extends \Traversable, \JsonSerializable {
     public function setPage($page);
 
     public function getOrder();
-    public function setOrder($order);
+    public function setOrder(...$columns);
 }

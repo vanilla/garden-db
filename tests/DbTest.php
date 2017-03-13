@@ -41,6 +41,8 @@ abstract class DbTest extends AbstractDbTest {
         ];
 
         self::$db->defineTable($tableDef);
+
+        return self::$db->getTableDef('user');
     }
 
     /**
@@ -369,7 +371,7 @@ abstract class DbTest extends AbstractDbTest {
     }
 
     /**
-     * Test a group of OR expressions
+     * Test a group of OR expressions.
      *
      * @depends testComments
      */
@@ -385,48 +387,14 @@ abstract class DbTest extends AbstractDbTest {
     }
 
     /**
-     * Provide some random user rows.
-     *
-     * @param int $count The number of users to provide.
-     * @return \Generator Returns a {@link \Generator} of users.
+     * Test query ordering.
      */
-    public function provideUsers($count = 10) {
-        $result = [];
+    public function testOrder() {
+        $table = __FUNCTION__;
+        $this->createPopulatedUserTable($table, 5);
 
-        for ($i = 0; $i < $count; $i++) {
-            $name = \Faker\Name::name();
-
-            $user = [
-                'name' => \Faker\Internet::userName($name),
-                'email' => \Faker\Internet::email($name),
-                'fullName' => $name,
-                'insertTime' => time()
-            ];
-
-            $result[] = $user;
-        }
-
-        return new \ArrayIterator($result);
-    }
-
-    /**
-     * Provide a single random user.
-     *
-     * @param string $fullname The full name of the user.
-     * @return array
-     */
-    public function provideUser($fullname = '') {
-        if (!$fullname) {
-            $fullname = \Faker\Name::name();
-        }
-
-        $user = [
-            'name' => \Faker\Internet::userName($fullname),
-            'email' => \Faker\Internet::email($fullname),
-            'fullName' => $fullname,
-            'insertTime' => time()
-        ];
-
-        return $user;
+        $order = ['-userID', 'name'];
+        $dbUsers = self::$db->get($table, [], ['order' => $order]);
+        $this->assertOrder($dbUsers, $order);
     }
 }

@@ -26,9 +26,6 @@ class MySqlDb extends Db {
         Db::OP_LIKE => 'like',
         Db::OP_AND => 'and',
         Db::OP_OR => 'or',
-
-        Db::ORDER_ASC => 'asc',
-        Db::ORDER_DESC => 'desc'
     ];
 
     /**
@@ -161,21 +158,14 @@ class MySqlDb extends Db {
 
         // Build the order.
         if (isset($options['order'])) {
-            $order = array_quick($options['order'], Db::ORDER_ASC);
-            $orders = array();
-            foreach ($order as $key => $value) {
-                switch ($value) {
-                    case Db::ORDER_ASC:
-                    case Db::ORDER_DESC:
-                        $direction = self::$map[$value];
-
-                        $orders[] = $this->escape($key)." $direction";
-                        break;
-                    default:
-                        trigger_error("Invalid sort direction '$value' for column '$key'.", E_USER_WARNING);
+            foreach ($options['order'] as $column) {
+                if ($column[0] === '-') {
+                    $order = $this->escape(substr($column, 1)).' desc';
+                } else {
+                    $order = $this->escape($column);
                 }
+                $orders[] = $order;
             }
-
             $sql .= "\norder by ".implode(', ', $orders);
         }
 
@@ -751,8 +741,7 @@ class MySqlDb extends Db {
             'table '.$this->prefixTable($tablename)."\n  ".
             implode(",\n  ", $parts);
 
-        $result = $this->queryDefine($sql, $options);
-        return $result;
+        $this->queryDefine($sql, $options);
     }
 
     /**

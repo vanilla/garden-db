@@ -7,6 +7,8 @@
 
 namespace Garden\Db\Tests;
 
+use Faker\Internet;
+use Faker\Name;
 use Garden\Db\Db;
 use Garden\Db\TableDef;
 
@@ -91,5 +93,100 @@ abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
         }
         sort($isActual);
         $this->assertEquals($isExpected, $isActual, "$tablename indexes are not the same.");
+    }
+
+    /**
+     * Assert that a dataset array is ordered by appropriate columns.
+     *
+     * @param \Traversable $dataset The dataset to check.
+     * @param array $order An array of column names, optionally starting with "-".
+     */
+    public function assertOrder($dataset, $order) {
+        $cmp = function ($a, $b) use ($order) {
+            foreach ($order as $column) {
+                $desc = 1;
+                if ($column[0] === '-') {
+                    $desc = -1;
+                    $column = substr($column, 1);
+                }
+
+                $r = strnatcmp($a[$column], $b[$column]);
+
+                if ($r !== 0) {
+                    return $r * $desc;
+                }
+            }
+            return 0;
+        };
+
+        $array = iterator_to_array($dataset);
+
+        $actual = $array;
+        usort($array, $cmp);
+
+        $this->assertSame($array, $actual);
+    }
+
+    /**
+     * Provide some random user rows.
+     *
+     * @param int $count The number of users to provide.
+     * @return \Generator Returns a {@link \Generator} of users.
+     */
+    public function provideUsers($count = 10) {
+        for ($i = 0; $i < $count; $i++) {
+            yield $this->provideUser();
+        }
+    }
+
+    /**
+     * Provide a single random user.
+     *
+     * @param string $fullName The full name of the user.
+     * @return array
+     */
+    public function provideUser($fullName = '') {
+        if (empty($fullName)) {
+            $fullName = Name::name();
+        }
+
+        $user = [
+            'name' => Internet::userName($fullName),
+            'email' => Internet::email($fullName),
+            'fullName' => $fullName,
+            'insertTime' => time()
+        ];
+
+        return $user;
+    }
+
+    /**
+     * Generate a new user table for testing.
+     *
+     * @param string $name The name of the table.
+     * @return TableDef
+     */
+    protected function getUserTableDef($name) {
+        $def = new TableDef($name);
+        $def->primaryKey('userID')
+            ->column('name', 'varchar(50)')
+            ->column('email', 'varchar(255)')
+            ->column('fullName', 'varchar(50)')
+            ->column('insertTime', 'int')
+            ->index(Db::INDEX_IX, 'name');
+
+        return $def;
+    }
+
+    /**
+     * Create and populate a user table.
+     *
+     * @param string $name The name of the table to create.
+     * @param int $count The number of users to insert.
+     */
+    protected function createPopulatedUserTable($name, $count = 10) {
+        $this->getUserTableDef($name)->exec(self::$db);
+
+        self::$db->load($name, $this->provideUsers(10));
     }
 }

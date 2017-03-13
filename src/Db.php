@@ -40,9 +40,6 @@ abstract class Db {
     const OP_AND = '$and';
     const OP_OR = '$or';
 
-    const ORDER_ASC = 'asc';
-    const ORDER_DESC = 'desc';
-
     private static $types = [
 
     ];
@@ -76,9 +73,11 @@ abstract class Db {
      * Initialize an instance of the {@link MySqlDb} class.
      *
      * @param PDO $pdo The connection to the database.
+     * @param string $px The database prefix.
      */
-    public function __construct(PDO $pdo) {
+    public function __construct(PDO $pdo, $px = '') {
         $this->pdo = $pdo;
+        $this->px = $px;
 
         $fetchMode = $this->pdo->getAttribute(PDO::ATTR_DEFAULT_FETCH_MODE);
         $this->setDefaultFetchMode($fetchMode === PDO::FETCH_BOTH ? PDO::FETCH_ASSOC: $fetchMode);

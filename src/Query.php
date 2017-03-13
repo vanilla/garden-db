@@ -42,6 +42,11 @@ class Query {
     private $offset;
 
     /**
+     * @var string[]
+     */
+    private $order;
+
+    /**
      * Instantiate a new instance of the {@link Query} class.
      *
      * @param string $from The table to query.
@@ -215,6 +220,7 @@ class Query {
         $r = [
             'from' => $this->from,
             'where' => $this->where,
+            'order' => $this->order,
             'limit' => $this->limit,
             'offset' => $this->offset
         ];
@@ -239,7 +245,7 @@ class Query {
     }
 
     /**
-     * Get the from.
+     * Get the name of the table that is being queried.
      *
      * @return string Returns the from.
      */
@@ -248,9 +254,9 @@ class Query {
     }
 
     /**
-     * Set the from.
+     * Set the name of the table that is being queried.
      *
-     * @param string $from
+     * @param string $from A table name.
      * @return $this
      */
     public function setFrom($from) {
@@ -270,7 +276,7 @@ class Query {
     /**
      * Set the limit.
      *
-     * @param int $limit
+     * @param int $limit The new limit.
      * @return $this
      */
     public function setLimit($limit) {
@@ -290,11 +296,42 @@ class Query {
     /**
      * Set the offset.
      *
-     * @param int $offset
+     * @param int $offset The new offset.
      * @return $this
      */
     public function setOffset($offset) {
         $this->offset = $offset;
+        return $this;
+    }
+
+    /**
+     * Get the order.
+     *
+     * @return string[] Returns an array of column name, optionally starting with a "-".
+     */
+    public function getOrder() {
+        return $this->order;
+    }
+
+    /**
+     * Set the order.
+     *
+     * @param array $columns An array of column name, optionally starting with a "-".
+     * @return $this
+     */
+    public function setOrder(...$columns) {
+        $this->order = $columns;
+        return $this;
+    }
+
+    /**
+     * Add one or more columns to the the order array.
+     *
+     * @param array $columns Column names optionally starting with a "-".
+     * @return $this
+     */
+    public function addOrder(...$columns) {
+        $this->order = array_merge($this->order, $columns);
         return $this;
     }
 }

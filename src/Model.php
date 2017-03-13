@@ -30,7 +30,7 @@ class Model {
     private $defaultLimit = 30;
 
     /**
-     * @var array
+     * @var string[]
      */
     private $defaultOrder = [];
 
@@ -186,11 +186,11 @@ class Model {
     /**
      * Set the defaultOrder.
      *
-     * @param array $defaultOrder
+     * @param array $columns
      * @return $this
      */
-    public function setDefaultOrder($defaultOrder) {
-        $this->defaultOrder = $defaultOrder;
+    public function setDefaultOrder(...$columns) {
+        $this->defaultOrder = $columns;
         return $this;
     }
 }
