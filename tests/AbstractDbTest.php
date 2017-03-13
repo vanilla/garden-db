@@ -61,7 +61,7 @@ abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
      */
     public function assertDefEquals($tablename, $expected, $actual, $subset = true) {
         $this->assertEquals($expected['name'], $actual['name'], "Table names are not equal.");
-
+        $tablename = $actual['name'];
 
         $colsExpected = $expected['columns'];
         $colsActual = $actual['columns'];

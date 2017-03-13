@@ -116,7 +116,7 @@ abstract class DbDefTest extends AbstractDbTest {
         $expected = $db->getTableDef($tbl);
 
         $db->reset();
-        $actual =  $db->getTableDef($tbl);
+        $actual = $db->getTableDef($tbl);
 
         $this->assertDefEquals($tbl, $expected, $actual);
     }

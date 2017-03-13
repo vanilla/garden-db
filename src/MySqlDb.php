@@ -786,7 +786,7 @@ class MySqlDb extends Db {
             return null;
         } elseif (in_array($type, ['int', 'integer', 'tinyint', 'smallint',
             'mediumint', 'bigint', 'unsigned big int', 'int2', 'int8', 'boolean'])) {
-            return force_int($value);
+            return filter_var($value, FILTER_VALIDATE_INT);
         } elseif (in_array($type, ['real', 'double', 'double precision', 'float',
             'numeric', 'decimal(10,5)'])) {
             return floatval($value);

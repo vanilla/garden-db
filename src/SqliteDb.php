@@ -61,7 +61,7 @@ class SqliteDb extends MySqlDb {
             $this->bracketList($columns, '`')."\n".
             $this->buildSelect($tmpTablename, [], ['columns' => $columns]);
 
-        $this->query($sql, Db::QUERY_WRITE);
+        $this->queryDefine($sql);
 
         // Drop the temp table.
         $this->dropTable($tmpTablename);
@@ -78,7 +78,7 @@ class SqliteDb extends MySqlDb {
             $this->prefixTable($oldname).
             ' rename to '.
             $this->prefixTable($newname);
-        $this->query($renameSql, Db::QUERY_WRITE);
+        $this->queryDefine($renameSql);
     }
 
     /**
@@ -90,6 +90,18 @@ class SqliteDb extends MySqlDb {
      */
     private function mergeTableDefs(array $tableDef, array $alterDef) {
         $result = $tableDef;
+
+        if ($this->findPrimaryKeyIndex($alterDef['add']['indexes'])) {
+            $remove = null;
+            foreach ($result['indexes'] as $i => $index) {
+                if ($index['type'] === Db::INDEX_PK) {
+                    $remove = $i;
+                }
+            }
+            if ($remove !== null) {
+                unset($result['indexes'][$i]);
+            }
+        }
 
         $result['columns'] = array_merge($result['columns'], $alterDef['def']['columns']);
         $result['indexes'] = array_merge($result['indexes'], $alterDef['add']['indexes']);
@@ -105,7 +117,7 @@ class SqliteDb extends MySqlDb {
     protected function dropIndex($indexName) {
         $sql = 'drop index if exists '.
             $this->escape($indexName);
-        $this->query($sql, Db::QUERY_DEFINE);
+        $this->queryDefine($sql);
     }
 
     /**
@@ -203,13 +215,12 @@ class SqliteDb extends MySqlDb {
         $parts = [];
 
         // Make sure the primary key columns are defined first and in order.
-        $autoinc = false;
-        if (isset($tableDef['indexes']['primary'])) {
-            $pkIndex = $tableDef['indexes']['primary'];
+        $autoInc = false;
+        if ($pkIndex = $this->findPrimaryKeyIndex($tableDef['indexes'])) {
             foreach ($pkIndex['columns'] as $column) {
                 $cdef = $tableDef['columns'][$column];
                 $parts[] = $this->columnDefString($column, $cdef);
-                $autoinc |= self::val('autoIncrement', $cdef, false);
+                $autoInc |= self::val('autoIncrement', $cdef, false);
                 unset($tableDef['columns'][$column]);
             }
         }
@@ -218,8 +229,8 @@ class SqliteDb extends MySqlDb {
             $parts[] = $this->columnDefString($name, $cdef);
         }
 
-        // Add the prinary key index.
-        if (isset($pkIndex) && !$autoinc) {
+        // Add the primary key index.
+        if (isset($pkIndex) && !$autoInc) {
             $parts[] = 'primary key '.$this->bracketList($pkIndex['columns'], '`');
         }
 
@@ -228,7 +239,7 @@ class SqliteDb extends MySqlDb {
             implode(",\n  ", $parts).
             "\n)";
 
-        $this->query($sql, Db::QUERY_DEFINE);
+        $this->queryDefine($sql);
 
         // Add the rest of the indexes.
         foreach (self::val('indexes', $tableDef, []) as $index) {
@@ -255,7 +266,7 @@ class SqliteDb extends MySqlDb {
             $this->prefixTable($tablename).
             $this->bracketList($indexDef['columns'], '`');
 
-        $this->query($sql, Db::QUERY_DEFINE);
+        $this->queryDefine($sql);
     }
 
     /**
@@ -282,20 +293,13 @@ class SqliteDb extends MySqlDb {
     }
 
     /**
-     * Get the columns for tables and put them in {MySqlDb::$tables}.
+     * Get the columns for a table..
      *
-     * @param string $table The table to get the columns for or blank for all columns.
-     * @return array|null Returns an array of columns if {@link $tablename} is specified, or null otherwise.
+     * @param string $table The table to get the columns for.
+     * @return array|null Returns an array of columns.
      */
-    protected function getColumnsDb($table = '') {
-        if (!$table) {
-            $tablenames = $this->getTableNames();
-            foreach ($tablenames as $table) {
-                $this->getColumnsDb($table);
-            }
-        }
-
-        $cdefs = (array)$this->query('pragma table_info('.$this->quote($this->getPx().$table).')');
+    protected function getColumnDefsDb($table) {
+        $cdefs = $this->queryStatement('pragma table_info('.$this->prefixTable($table, false).')')->fetchAll(PDO::FETCH_ASSOC);
         if (empty($cdefs)) {
             return null;
         }
@@ -310,51 +314,37 @@ class SqliteDb extends MySqlDb {
             if ($cdef['pk']) {
                 $pk[] = $cdef['name'];
                 if (strcasecmp($cdef['type'], 'integer') === 0) {
-                    $column['autoincrement'] = true;
+                    $column['autoIncrement'] = true;
                 } else {
                     $column['primary'] = true;
                 }
             }
             if ($cdef['dflt_value'] !== null) {
-                $column['default'] = $cdef['dflt_value'];
+                $column['default'] = $this->forceType($cdef['dflt_value'], $column['dbtype']);
             }
             $columns[$cdef['name']] = $column;
         }
-        $tdef = ['columns' => $columns];
-        if (!empty($pk)) {
-            $tdef['indexes'][Db::INDEX_PK] = [
-                'columns' => $pk,
-                'type' => Db::INDEX_PK
-            ];
-        }
-        $this->tables[$table] = $tdef;
+//        $tdef = ['columns' => $columns];
+//        if (!empty($pk)) {
+//            $tdef['indexes'][Db::INDEX_PK] = [
+//                'columns' => $pk,
+//                'type' => Db::INDEX_PK
+//            ];
+//        }
+//        $this->tables[$table] = $tdef;
         return $columns;
     }
 
     /**
-     * Get the indexes from the database.
+     * Get the indexes for a table.
      *
      * @param string $table The name of the table to get the indexes for or an empty string to get all indexes.
      * @return array|null
      */
     protected function getIndexesDb($table = '') {
-        if (!$table) {
-            $tablenames = $this->getTableNames();
-            foreach ($tablenames as $table) {
-                $this->getIndexesDb($table);
-            }
-        }
+        $indexes = [];
 
-        $pk = valr(['indexes', Db::INDEX_PK], $this->tables[$table]);
-
-        // Reset the index list for the table.
-        $this->tables[$table]['indexes'] = [];
-
-        if ($pk) {
-            $this->tables[$table]['indexes'][Db::INDEX_PK] = $pk;
-        }
-
-        $indexInfos = (array)$this->query('pragma index_list('.$this->prefixTable($table).')');
+        $indexInfos = $this->queryStatement('pragma index_list('.$this->prefixTable($table).')')->fetchAll(PDO::FETCH_ASSOC);
         foreach ($indexInfos as $row) {
             $indexName = $row['name'];
             if ($row['unique']) {
@@ -364,17 +354,17 @@ class SqliteDb extends MySqlDb {
             }
 
             // Query the columns in the index.
-            $columns = (array)$this->query('pragma index_info('.$this->quote($indexName).')');
+            $columns = $this->queryStatement('pragma index_info('.$this->quote($indexName).')')->fetchAll(PDO::FETCH_ASSOC);
 
             $index = [
                 'name' => $indexName,
                 'columns' => array_column($columns, 'name'),
                 'type' => $type
             ];
-            $this->tables[$table]['indexes'][] = $index;
+            $indexes[] = $index;
         }
 
-        return $this->tables[$table]['indexes'];
+        return $indexes;
     }
 
     /**
@@ -385,31 +375,34 @@ class SqliteDb extends MySqlDb {
      * @param bool $quick Whether or not to quickly look for <tablename>ID for the primary key.
      * @return array|null Returns the primary keys and values from {@link $rows} or null if the primary key isn't found.
      */
-    protected function getPKValue($tablename, array $row, $quick = false) {
+    private function getPKValue($tablename, array $row, $quick = false) {
         if ($quick && isset($row[$tablename.'ID'])) {
             return [$tablename.'ID' => $row[$tablename.'ID']];
         }
 
         $tdef = $this->getTableDef($tablename);
-        if (isset($tdef['indexes'][Db::INDEX_PK]['columns'])) {
-            $pkColumns = array_flip($tdef['indexes'][Db::INDEX_PK]['columns']);
-            $cols = array_intersect_key($row, $pkColumns);
-            if (count($cols) === count($pkColumns)) {
-                return $cols;
+        $cols = [];
+        foreach ($tdef['columns'] as $name => $cdef) {
+            if (empty($cdef['primary'])) {
+                break;
             }
-        }
+            if (!array_key_exists($name, $row)) {
+                return null;
+            }
 
-        return null;
+            $cols[$name] = $row[$name];
+        }
+        return $cols;
     }
 
     /**
-     * Get the all of tablenames in the database.
+     * Get the all of table names in the database.
      *
-     * @return array Returns an array of table names with prefixes stripped.
+     * @return array Returns an array of table names.
      */
-    protected function getTableNames() {
+    protected function getTableNamesDb() {
         // Get the table names.
-        $tables = (array)$this->get(
+        $tables = $this->get(
             new Identifier('sqlite_master'),
             [
                 'type' => 'table',
@@ -418,18 +411,12 @@ class SqliteDb extends MySqlDb {
             [
                 'columns' => ['name']
             ]
-        );
-        $tables = array_column($tables, 'name');
+        )->fetchAll(PDO::FETCH_COLUMN);
 
         // Remove internal tables.
         $tables = array_filter($tables, function ($name) {
             return substr($name, 0, 7) !== 'sqlite_';
         });
-
-        // Strip the table prefixes.
-        $tables = array_map(function ($name) {
-            return ltrim_substr($name, $this->getPx());
-        }, $tables);
 
         return $tables;
     }
@@ -443,7 +430,7 @@ class SqliteDb extends MySqlDb {
             unset($options[Db::OPTION_UPSERT]);
 
             $keys = $this->getPKValue($table, $rows, true);
-            if (!$keys) {
+            if (empty($keys)) {
                 throw new \Exception("Cannot upsert with no key.", 500);
             }
             // Try updating first.

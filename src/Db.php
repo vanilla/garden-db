@@ -174,6 +174,7 @@ abstract class Db {
 
         $tableDef = $this->getTableDefDb($table);
         if ($tableDef !== null) {
+            $this->fixIndexes($tableDef['name'], $tableDef);
             $this->tables[$tableKey] = $tableDef;
         }
 
@@ -275,7 +276,7 @@ abstract class Db {
             $alterDef['drop']['indexes'] = [];
 
             // If the primary key has changed then the old one needs to be dropped.
-            if ($pk = $this->findPrimaryKey($dropIndexes)) {
+            if ($pk = $this->findPrimaryKeyIndex($dropIndexes)) {
                 $alterDef['drop']['indexes'][] = $pk;
             }
         }
@@ -305,9 +306,9 @@ abstract class Db {
      * @param array $indexes The indexes to search.
      * @return array|null Returns the primary key or **null** if there isn't one.
      */
-    private function findPrimaryKey(array $indexes) {
+    protected function findPrimaryKeyIndex(array $indexes) {
         foreach ($indexes as $index) {
-            if ($index['type'] = Db::INDEX_PK) {
+            if ($index['type'] === Db::INDEX_PK) {
                 return $index;
             }
         }
@@ -362,7 +363,7 @@ abstract class Db {
         }
 
         if (!$primaryFound && !empty($primaryColumns)) {
-            $tableDef['indexes'][db::INDEX_PK] = [
+            $tableDef['indexes'][] = [
                 'columns' => $primaryColumns,
                 'type' => Db::INDEX_PK
             ];
