@@ -54,12 +54,11 @@ abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
     /**
      * Assert that two table definitions are equal.
      *
-     * @param string $tablename The name of the table.
      * @param array $expected The expected table definition.
      * @param array $actual The actual table definition.
      * @param bool $subset Whether or not expected can be a subset of actual.
      */
-    public function assertDefEquals($tablename, $expected, $actual, $subset = true) {
+    public function assertDefEquals($expected, $actual, $subset = true) {
         $this->assertEquals($expected['name'], $actual['name'], "Table names are not equal.");
         $tablename = $actual['name'];
 
