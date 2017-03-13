@@ -28,7 +28,7 @@ abstract class DbDefTest extends AbstractDbTest {
         $def1 = $def->table('user')
             ->primaryKey('userID')
             ->column('name', 'varchar(50)')
-            ->index('name', Db::INDEX_IX)
+            ->index(Db::INDEX_IX, 'name')
             ->toArray();
 
         $db->defineTable($def->toArray());
@@ -48,13 +48,13 @@ abstract class DbDefTest extends AbstractDbTest {
         $def->table($tbl)
             ->column('col1', 'int', false)
             ->column('col2', 'int', 0)
-            ->index('col1', Db::INDEX_IX);
+            ->index(Db::INDEX_IX, 'col1');
 
         $expected = $def->table($tbl)
             ->column('cola', 'int', false)
             ->column('colb', 'int', false)
             ->column('col2', 'int', false)
-            ->index('col1', Db::INDEX_IX)
+            ->index(Db::INDEX_IX, 'col1')
             ->toArray();
 
         $db->defineTable($expected);
@@ -75,14 +75,14 @@ abstract class DbDefTest extends AbstractDbTest {
         $def->table($tbl)
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
-            ->index('col1', Db::INDEX_IX);
+            ->index(Db::INDEX_IX, 'col1');
         $db->defineTable($def->toArray());
 
         $expected = $def->table($tbl)
             ->column('cola', 'int')
             ->column('colb', 'int')
             ->column('col2', 'int')
-            ->index('col2', Db::INDEX_IX)
+            ->index(Db::INDEX_IX, 'col2')
             ->toArray();
         $db->defineTable($expected, [Db::OPTION_DROP => true]);
 
@@ -104,13 +104,13 @@ abstract class DbDefTest extends AbstractDbTest {
         $def->table($tbl)
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
-            ->index('col1', Db::INDEX_PK);
+            ->index(Db::INDEX_PK, 'col1');
         $db->defineTable($def->toArray());
 
         $def->table($tbl)
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
-            ->index(['col1', 'col2'], Db::INDEX_PK);
+            ->index(Db::INDEX_PK, 'col1', 'col2');
         $db->defineTable($def->toArray());
 
         $expected = $db->getTableDef($tbl);
@@ -132,13 +132,13 @@ abstract class DbDefTest extends AbstractDbTest {
         $def->table($tbl)
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
-            ->index(['col1', 'col2'], Db::INDEX_PK);
+            ->index(Db::INDEX_PK, 'col1', 'col2');
         $db->defineTable($def->toArray());
 
         $def->table($tbl)
             ->column('col1', 'int')
             ->column('col2', 'int', 0)
-            ->index(['col2', 'col1'], Db::INDEX_PK);
+            ->index(Db::INDEX_PK, 'col2', 'col1');
         $db->defineTable($def->toArray());
 
         $expected = $db->getTableDef($tbl);

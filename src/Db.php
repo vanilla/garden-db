@@ -13,8 +13,6 @@ use PDO;
  * Defines a standard set of methods that all database drivers must conform to.
  */
 abstract class Db {
-    /// Constants ///
-
     const QUERY_DEFINE = 'define';
     const QUERY_READ = 'read';
     const QUERY_WRITE = 'write';
@@ -28,7 +26,7 @@ abstract class Db {
     const OPTION_UPSERT = 'upsert';
     const OPTION_TRUNCATE = 'truncate';
     const OPTION_DROP = 'drop';
-    const OPTION_MODE = 'mode';
+    const OPTION_FETCH_MODE = 'fetchMode';
 
     const OP_EQ = '=';
     const OP_GT = '>';
@@ -45,45 +43,30 @@ abstract class Db {
     const ORDER_ASC = 'asc';
     const ORDER_DESC = 'desc';
 
-    const FETCH_TABLENAMES = 0x1;
-    const FETCH_COLUMNS = 0x2;
-    const FETCH_INDEXES = 0x4;
-
-    const MODE_EXEC = 0x1;
-    const MODE_ECHO = 0x2;
-    const MODE_SQL = 0x4;
-    const MODE_PDO = 0x8;
-
-    /// Properties ///
-
     /**
      * @var string The database prefix.
      */
     private $px = '';
 
     /**
-     * @var int The query execution mode.
+     * @var array A cached copy of the table schemas indexed by lowercase name.
      */
-    protected $mode = Db::MODE_EXEC;
+    private $tables = [];
 
     /**
-     * @var array A cached copy of the table schemas.
+     * @var array A cached copy of the table names indexed by lowercase name.
      */
-    protected $tables = [];
+    private $tableNames = null;
 
-    /**
-     * @var int Whether or not all the tables have been fetched.
-     */
-    protected $allTablesFetched = 0;
-
-    /**
-     * @var int The number of rows that were affected by the last query.
-     */
-    protected $rowCount;
     /**
      * @var \PDO
      */
     private $pdo;
+
+    /**
+     * @var array The default fetch mode.
+     */
+    private $defaultFetchMode = 0;
 
     /**
      * Initialize an instance of the {@link MySqlDb} class.
@@ -92,6 +75,9 @@ abstract class Db {
      */
     public function __construct(PDO $pdo) {
         $this->pdo = $pdo;
+
+        $fetchMode = $this->pdo->getAttribute(PDO::ATTR_DEFAULT_FETCH_MODE);
+        $this->setDefaultFetchMode($fetchMode === PDO::FETCH_BOTH ? PDO::FETCH_ASSOC: $fetchMode);
     }
 
     /// Methods ///
@@ -118,10 +104,53 @@ abstract class Db {
     /**
      * Drop a table.
      *
-     * @param string $tableName The name of the table to drop.
+     * @param string $table The name of the table to drop.
      * @param array $options An array of additional options when adding the table.
      */
-    abstract public function dropTable($tableName, array $options = []);
+    final public function dropTable($table, array $options = []) {
+        $options += [Db::OPTION_IGNORE => false];
+        $this->dropTableDb($table, $options);
+
+        $tableKey = strtolower($table);
+        unset($this->tables[$tableKey], $this->tableNames[$tableKey]);
+    }
+
+    /**
+     * Perform the actual table drop.
+     *
+     * @param string $table The name of the table to drop.
+     * @param array $options An array of additional options when adding the table.
+     */
+    abstract protected function dropTableDb($table, array $options = []);
+
+    /**
+     * Get the names of all the tables in the database.
+     *
+     * @return string[] Returns an array of table names without prefixes.
+     */
+    final public function getTableNames() {
+        if ($this->tableNames !== null) {
+            return array_values($this->tableNames);
+        }
+
+        $names = $this->getTableNamesDb();
+
+        foreach ($names as $name) {
+            $name = $this->stripPrefix($name);
+            $this->tableNames[strtolower($name)] = $name;
+        }
+
+        return array_values($this->tableNames);
+    }
+
+    /**
+     * Fetch the table names from the underlying database layer.
+     *
+     * The driver should return all table names. It doesn't have to strip the prefix.
+     *
+     * @return string[]
+     */
+    abstract protected function getTableNamesDb();
 
     /**
      * Get a table definition.
@@ -129,41 +158,66 @@ abstract class Db {
      * @param string $table The name of the table.
      * @return array|null Returns the table definition or null if the table does not exist.
      */
-    public function getTableDef($table) {
-        $ltablename = strtolower($table);
+    final public function getTableDef($table) {
+        $tableKey = strtolower($table);
 
-        // Check to see if the table isn't in the cache first.
-        if ($this->allTablesFetched & Db::FETCH_TABLENAMES &&
-            !isset($this->tables[$ltablename])
-        ) {
+        // First check the table cache.
+        if (isset($this->tables[$tableKey])) {
+            $tableDef = $this->tables[$tableKey];
+
+            if (isset($tableDef['columns'], $tableDef['indexes'])) {
+                return $tableDef;
+            }
+        } elseif ($this->tableNames !== null && !isset($this->tableNames[$tableKey])) {
             return null;
         }
 
-        if (
-            isset($this->tables[$ltablename]) &&
-            is_array($this->tables[$ltablename]) &&
-            isset($this->tables[$ltablename]['columns'], $this->tables[$ltablename]['indexes'])
-        ) {
-            return $this->tables[$ltablename];
+        $tableDef = $this->getTableDefDb($table);
+        if ($tableDef !== null) {
+            $this->tables[$tableKey] = $tableDef;
         }
-        return [];
+
+        return $tableDef;
     }
 
     /**
-     * Get all of the tables in the database.
+     * Fetch the table definition from the database.
      *
-     * @param bool $withDefs Whether or not to return the full table definitions or just the table names.
-     * @return array Returns an array of either the table definitions or the table names.
+     * @param string $table The name of the table to get.
+     * @return array|null Returns the table def or **null** if the table doesn't exist.
      */
-    public function getAllTables($withDefs = false) {
-        if ($withDefs && ($this->allTablesFetched & Db::FETCH_COLUMNS)) {
-            return $this->tables;
-        } elseif (!$withDefs && ($this->allTablesFetched & Db::FETCH_TABLENAMES)) {
-            return array_keys($this->tables);
-        } else {
+    abstract protected function getTableDefDb($table);
+
+
+    /**
+     * Get the column definitions for a table.
+     *
+     * @param string $table The name of the table to get the columns for.
+     * @return array|null Returns an array of column definitions.
+     */
+    final public function getColumnDefs($table) {
+        $tableKey = strtolower($table);
+
+        if (!empty($this->tables[$tableKey]['columns'])) {
+            $this->tables[$tableKey]['columns'];
+        } elseif ($this->tableNames !== null && !isset($this->tableNames[$tableKey])) {
             return null;
         }
+
+        $columnDefs = $this->getColumnDefs($table);
+        if ($columnDefs !== null) {
+            $this->tables[$tableKey]['columns'] = $columnDefs;
+        }
+        return $columnDefs;
     }
+
+    /**
+     * Get the column definitions from the database.
+     *
+     * @param string $table The name of the table to fetch the columns for.
+     * @return array|null
+     */
+    abstract protected function getColumnDefsDb($table);
 
     /**
      * Set a table definition to the database.
@@ -171,11 +225,11 @@ abstract class Db {
      * @param array $tableDef The table definition.
      * @param array $options An array of additional options when adding the table.
      */
-    public function defineTable(array $tableDef, array $options = []) {
-        $options += [Db::OPTION_DROP => false, 'columns' => []];
+    final public function defineTable(array $tableDef, array $options = []) {
+        $options += [Db::OPTION_DROP => false];
 
         $tableName = $tableDef['name'];
-        $lTableName = strtolower($tableName);
+        $tableKey = strtolower($tableName);
         $tableDef['name'] = $tableName;
         $curTable = $this->getTableDef($tableName);
 
@@ -183,7 +237,8 @@ abstract class Db {
 
         if (!$curTable) {
             $this->createTable($tableDef, $options);
-            $this->tables[$lTableName] = $tableDef;
+            $this->tables[$tableKey] = $tableDef;
+            $this->tableNames[$tableKey] = $tableDef['name'];
             return;
         }
         // This is the alter statement.
@@ -220,8 +275,8 @@ abstract class Db {
             $alterDef['drop']['indexes'] = [];
 
             // If the primary key has changed then the old one needs to be dropped.
-            if (isset($dropIndexes[Db::INDEX_PK])) {
-                $alterDef['drop']['indexes'][Db::INDEX_PK] = $dropIndexes[Db::INDEX_PK];
+            if ($pk = $this->findPrimaryKey($dropIndexes)) {
+                $alterDef['drop']['indexes'][] = $pk;
             }
         }
 
@@ -240,7 +295,23 @@ abstract class Db {
 
         // Update the cached schema.
         $tableDef['name'] = $tableName;
-        $this->tables[$lTableName] = $tableDef;
+        $this->tables[$tableKey] = $tableDef;
+        $this->tableNames[$tableKey] = $tableName;
+    }
+
+    /**
+     * Find the primary key in an array of indexes.
+     *
+     * @param array $indexes The indexes to search.
+     * @return array|null Returns the primary key or **null** if there isn't one.
+     */
+    private function findPrimaryKey(array $indexes) {
+        foreach ($indexes as $index) {
+            if ($index['type'] = Db::INDEX_PK) {
+                return $index;
+            }
+        }
+        return null;
     }
 
     /**
@@ -255,7 +326,7 @@ abstract class Db {
     private function fixIndexes($tableName, array &$tableDef, $curTableDef = null) {
         $tableDef += ['indexes' => []];
 
-        // Loop through the columns and add get the primary key index.
+        // Loop through the columns and add the primary key index.
         $primaryColumns = [];
         foreach ($tableDef['columns'] as $cname => $cdef) {
             if (!empty($cdef['primary'])) {
@@ -279,9 +350,13 @@ abstract class Db {
                     throw new \Exception("There is a mismatch in the primary key index and primary key columns.", 500);
                 }
             } elseif (isset($curTableDef['indexes'])) {
-                $curIndexDef = array_usearch($indexDef, $curTableDef['indexes'], [$this, 'indexCompare']);
-                if ($curIndexDef && isset($curIndexDef['name'])) {
-                    $indexDef['name'] = $curIndexDef['name'];
+                foreach ($curTableDef['indexes'] as $curIndexDef) {
+                    if ($this->indexCompare($indexDef, $curIndexDef) === 0) {
+                        if (!empty($curIndexDef['name'])) {
+                            $indexDef['name'] = $curIndexDef['name'];
+                        }
+                        break;
+                    }
                 }
             }
         }
@@ -320,46 +395,51 @@ abstract class Db {
      * @return int Returns an integer less than, equal to, or greater than zero if {@link $a} is
      * considered to be respectively less than, equal to, or greater than {@link $b}.
      */
-    public function indexCompare(array $a, array $b) {
+    private function indexCompare(array $a, array $b) {
         if ($a['columns'] > $b['columns']) {
             return 1;
         } elseif ($a['columns'] < $b['columns']) {
             return -1;
         }
 
-        return strcmp(self::val('type', $a, ''), self::val('type', $b, ''));
+        return strcmp(
+            isset($a['type']) ? $a['type'] : '',
+            isset($b['type']) ? $b['type'] : ''
+        );
     }
 
     /**
      * Get data from the database.
      *
-     * @param string|Literal $tableName The name of the table to get the data from.
+     * @param string|Identifier $table The name of the table to get the data from.
      * @param array $where An array of where conditions.
      * @param array $options An array of additional options.
-     * @return mixed Returns the result set.
+     * @return \PDOStatement Returns the result set.
      */
-    abstract public function get($tableName, array $where, array $options = []);
+    abstract public function get($table, array $where, array $options = []);
 
     /**
      * Get a single row from the database.
      *
      * This is a convenience method that calls {@link Db::get()} and shifts off the first row.
      *
-     * @param string|Literal $tableName The name of the table to get the data from.
+     * @param string|Identifier $table The name of the table to get the data from.
      * @param array $where An array of where conditions.
      * @param array $options An array of additional options.
-     * @return array|false Returns the row or false if there is no row.
+     * @return array|object|null Returns the row or false if there is no row.
      */
-    public function getOne($tableName, array $where, array $options = []) {
+    final public function getOne($table, array $where, array $options = []) {
         $options['limit'] = 1;
-        $rows = $this->get($tableName, $where, $options);
-        return array_shift($rows);
+        $rows = $this->get($table, $where, $options);
+        $row = $rows->fetch();
+
+        return $row === false ? null : $row;
     }
 
     /**
      * Insert a row into a table.
      *
-     * @param string $tableName The name of the table to insert into.
+     * @param string $table The name of the table to insert into.
      * @param array $row The row of data to insert.
      * @param array $options An array of options for the insert.
      *
@@ -370,25 +450,24 @@ abstract class Db {
      * Db::OPTION_UPSERT
      * : Whether or not to update the existing data when duplicate keys exist.
      *
-     * @return mixed Should return the id of the inserted record.
+     * @return mixed Returns the id of the inserted record, **true** if the table doesn't have an auto increment, or **false** otherwise.
      * @see Db::load()
      */
-    abstract public function insert($tableName, array $row, array $options = []);
+    abstract public function insert($table, array $row, array $options = []);
 
     /**
      * Load many rows into a table.
      *
-     * @param string $tableName The name of the table to insert into.
+     * @param string $table The name of the table to insert into.
      * @param \Traversable|array $rows A dataset to insert.
      * Note that all rows must contain the same columns.
      * The first row will be looked at for the structure of the insert and the rest of the rows will use this structure.
      * @param array $options An array of options for the inserts. See {@link Db::insert()} for details.
-     * @return mixed
      * @see Db::insert()
      */
-    public function load($tableName, $rows, array $options = []) {
+    public function load($table, $rows, array $options = []) {
         foreach ($rows as $row) {
-            $this->insert($tableName, $row, $options);
+            $this->insert($table, $row, $options);
         }
     }
 
@@ -396,36 +475,35 @@ abstract class Db {
     /**
      * Update a row or rows in a table.
      *
-     * @param string $tableName The name of the table to update.
+     * @param string $table The name of the table to update.
      * @param array $set The values to set.
      * @param array $where The where filter for the update.
      * @param array $options An array of options for the update.
-     * @return mixed
+     * @return int Returns the number of affected rows.
      */
-    abstract public function update($tableName, array $set, array $where, array $options = []);
+    abstract public function update($table, array $set, array $where, array $options = []);
 
     /**
      * Delete rows from a table.
      *
-     * @param string $tableName The name of the table to delete from.
+     * @param string $table The name of the table to delete from.
      * @param array $where The where filter of the delete.
      * @param array $options An array of options.
      *
      * Db:OPTION_TRUNCATE
      * : Truncate the table instead of deleting rows. In this case {@link $where} must be blank.
-     * @return mixed
+     * @return int Returns the number of affected rows.
      */
-    abstract public function delete($tableName, array $where, array $options = []);
+    abstract public function delete($table, array $where, array $options = []);
 
     /**
      * Reset the internal table definition cache.
      *
-     * @return Db Returns $this for fluent calls.
+     * @return $this
      */
     public function reset() {
         $this->tables = [];
-        $this->allTablesFetched = 0;
-        $this->rowCount = 0;
+        $this->tableNames = null;
         return $this;
     }
 
@@ -448,6 +526,71 @@ abstract class Db {
         $sx = $indexDef['suffix'];
         $result = $px.$tableName.'_'.($sx ?: implode('', $indexDef['columns']));
         return $result;
+    }
+
+    /**
+     * Execute a query that fetches data.
+     *
+     * @param string $sql The query to execute.
+     * @param array $params Input parameters for the query.
+     * @param array $options Additional options.
+     * @return \PDOStatement Returns the result of the query.
+     * @throws \PDOException Throws an exception if something went wrong during the query.
+     */
+    protected function queryStatement($sql, array $params = [], array $options = []) {
+        $options += [Db::OPTION_FETCH_MODE => $this->defaultFetchMode];
+
+        $stm = $this->getPDO()->prepare($sql);
+        $r = $stm->execute($params);
+
+        if ($options[Db::OPTION_FETCH_MODE]) {
+            $stm->setFetchMode(...(array)$options[Db::OPTION_FETCH_MODE]);
+        }
+
+        // This is a kludge for those that don't have errors turning into exceptions.
+        if ($r === false) {
+            list($state, $code, $msg) = $stm->errorInfo();
+            throw new \PDOException($msg, $code);
+        }
+
+        return $stm;
+    }
+
+    /**
+     * Query the database and return a row count.
+     *
+     * @param string $sql The query to execute.
+     * @param array $params Input parameters for the query.
+     * @param array $options Additional options.
+     * @return int
+     */
+    protected function queryModify($sql, array $params = [], array $options = []) {
+        $stm = $this->queryStatement($sql, $params, $options);
+        return $stm->rowCount();
+    }
+
+    /**
+     * Query the database and return the ID of the record that was inserted.
+     *
+     * @param string $sql The query to execute.
+     * @param array $params Input parameters for the query.
+     * @param array $options Additional options.
+     * @return int Returns the record ID.
+     */
+    protected function queryID($sql, array $params = [], array $options = []) {
+        $stm = $this->queryStatement($sql, $params, $options);
+        $r = $this->getPDO()->lastInsertId();
+        return (int)$r;
+    }
+
+    /**
+     * Query the database for a database define.
+     *
+     * @param string $sql The query to execute.
+     * @param array $options Additional options.
+     */
+    protected function queryDefine($sql, array $options = []) {
+        $stm = $this->queryStatement($sql, [], $options);
     }
 
     /**
@@ -530,6 +673,20 @@ abstract class Db {
     }
 
     /**
+     * Strip the database prefix off a table name.
+     *
+     * @param string $table The name of the table to strip.
+     * @return string Returns the table name stripped of the prefix.
+     */
+    protected function stripPrefix($table) {
+        $len = strlen($this->px);
+        if (strcasecmp(substr($table, 0, $len), $this->px) === 0) {
+            $table = substr($table, $len);
+        }
+        return $table;
+    }
+
+    /**
      * Optionally quote a where value.
      *
      * @param mixed $value The value to quote.
@@ -563,6 +720,30 @@ abstract class Db {
      */
     public function setPDO(PDO $pdo) {
         $this->pdo = $pdo;
+        return $this;
+    }
+
+    /**
+     * Get the default fetch mode.
+     *
+     * @return array|int Returns the default fetch mode.
+     */
+    public function getDefaultFetchMode() {
+        if (count($this->defaultFetchMode) === 1) {
+            return $this->defaultFetchMode[0];
+        } else {
+            return $this->defaultFetchMode;
+        }
+    }
+
+    /**
+     * Set the defaultFetchMode.
+     *
+     * @param array $mode
+     * @return $this
+     */
+    public function setDefaultFetchMode(...$mode) {
+        $this->defaultFetchMode = $mode;
         return $this;
     }
 }

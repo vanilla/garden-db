@@ -45,7 +45,7 @@ abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
     public static function setUpBeforeClass() {
         // Drop all of the tables in the database.
         $db = static::createDb();
-        $tables = $db->getAllTables();
+        $tables = $db->getTableNames();
         array_map([$db, 'dropTable'], $tables);
 
         self::$db = $db;

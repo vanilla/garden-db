@@ -146,7 +146,7 @@ abstract class DbTest extends AbstractDbTest {
             ->column('userID', 'int')
             ->column('key', 'varchar(50)')
             ->column('value', 'text')
-            ->index(['userID', 'key'], Db::INDEX_PK);
+            ->index(Db::INDEX_PK, 'userID', 'key');
         $db->defineTable($dbdef->toArray());
 
         $db->insert(
@@ -167,7 +167,7 @@ abstract class DbTest extends AbstractDbTest {
             [Db::OPTION_UPSERT => true]
         );
 
-        $rows = $db->get('userMeta', ['userID' => 1, 'key' => 'bio']);
+        $rows = $db->get('userMeta', ['userID' => 1, 'key' => 'bio'])->fetchAll();
         $this->assertEquals(1, count($rows));
         $firstRow = reset($rows);
         $this->assertEquals(
@@ -260,7 +260,7 @@ abstract class DbTest extends AbstractDbTest {
         $db->load('tuple', $data);
 
         // Test some logical gets.
-        $dbData = $db->get('tuple', $where, ['order' => ['id']]);
+        $dbData = $db->get('tuple', $where, ['order' => ['id']])->fetchAll();
         $values = array_column($dbData, 'id');
         $this->assertEquals($expected, $values);
     }
@@ -327,16 +327,6 @@ abstract class DbTest extends AbstractDbTest {
     }
 
     /**
-     * Test {@link Db::testGetAllTables()}.
-     */
-    public function testGetAllTables() {
-        $db = self::$db;
-
-        $tablenames = $db->getAllTables();
-        $tabledefs = $db->getAllTables(true);
-    }
-
-    /**
      * Create and populate a simple test table for various queries.
      */
     public function testComments() {
@@ -346,7 +336,7 @@ abstract class DbTest extends AbstractDbTest {
         $def->column('id', 'int')
             ->column('parentID', 'int')
             ->column('count', 'int', 0)
-            ->index('id', Db::INDEX_PK);
+            ->index(Db::INDEX_PK, 'id');
         $db->defineTable($def->toArray());
 
         $rows = [
@@ -357,7 +347,7 @@ abstract class DbTest extends AbstractDbTest {
         ];
         $db->load('comment', $rows);
 
-        $dbRows = $db->get('comment', []);
+        $dbRows = $db->get('comment', [])->fetchAll();
         $this->assertEquals($rows, $dbRows);
     }
 
@@ -373,7 +363,7 @@ abstract class DbTest extends AbstractDbTest {
             ->addWhere('count', 0)
             ->end();
 
-        $rows = $qry->exec(self::$db);
+        $rows = $qry->exec(self::$db)->fetchAll();
 
         $this->assertEquals([1], array_column($rows, 'id'));
     }
@@ -390,7 +380,7 @@ abstract class DbTest extends AbstractDbTest {
             ->addWhere('count', 0)
             ->end();
 
-        $rows = $qry->exec(self::$db);
+        $rows = $qry->exec(self::$db)->fetchAll();
         $this->assertEquals([1, 2, 3], array_column($rows, 'id'));
     }
 

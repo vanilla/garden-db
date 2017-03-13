@@ -284,18 +284,18 @@ class SqliteDb extends MySqlDb {
     /**
      * Get the columns for tables and put them in {MySqlDb::$tables}.
      *
-     * @param string $tableName The table to get the columns for or blank for all columns.
+     * @param string $table The table to get the columns for or blank for all columns.
      * @return array|null Returns an array of columns if {@link $tablename} is specified, or null otherwise.
      */
-    protected function getColumns($tableName = '') {
-        if (!$tableName) {
+    protected function getColumnsDb($table = '') {
+        if (!$table) {
             $tablenames = $this->getTableNames();
-            foreach ($tablenames as $tableName) {
-                $this->getColumns($tableName);
+            foreach ($tablenames as $table) {
+                $this->getColumnsDb($table);
             }
         }
 
-        $cdefs = (array)$this->query('pragma table_info('.$this->quote($this->getPx().$tableName).')');
+        $cdefs = (array)$this->query('pragma table_info('.$this->quote($this->getPx().$table).')');
         if (empty($cdefs)) {
             return null;
         }
@@ -327,34 +327,34 @@ class SqliteDb extends MySqlDb {
                 'type' => Db::INDEX_PK
             ];
         }
-        $this->tables[$tableName] = $tdef;
+        $this->tables[$table] = $tdef;
         return $columns;
     }
 
     /**
      * Get the indexes from the database.
      *
-     * @param string $tableName The name of the table to get the indexes for or an empty string to get all indexes.
+     * @param string $table The name of the table to get the indexes for or an empty string to get all indexes.
      * @return array|null
      */
-    protected function getIndexes($tableName = '') {
-        if (!$tableName) {
+    protected function getIndexesDb($table = '') {
+        if (!$table) {
             $tablenames = $this->getTableNames();
-            foreach ($tablenames as $tableName) {
-                $this->getIndexes($tableName);
+            foreach ($tablenames as $table) {
+                $this->getIndexesDb($table);
             }
         }
 
-        $pk = valr(['indexes', Db::INDEX_PK], $this->tables[$tableName]);
+        $pk = valr(['indexes', Db::INDEX_PK], $this->tables[$table]);
 
         // Reset the index list for the table.
-        $this->tables[$tableName]['indexes'] = [];
+        $this->tables[$table]['indexes'] = [];
 
         if ($pk) {
-            $this->tables[$tableName]['indexes'][Db::INDEX_PK] = $pk;
+            $this->tables[$table]['indexes'][Db::INDEX_PK] = $pk;
         }
 
-        $indexInfos = (array)$this->query('pragma index_list('.$this->prefixTable($tableName).')');
+        $indexInfos = (array)$this->query('pragma index_list('.$this->prefixTable($table).')');
         foreach ($indexInfos as $row) {
             $indexName = $row['name'];
             if ($row['unique']) {
@@ -371,10 +371,10 @@ class SqliteDb extends MySqlDb {
                 'columns' => array_column($columns, 'name'),
                 'type' => $type
             ];
-            $this->tables[$tableName]['indexes'][] = $index;
+            $this->tables[$table]['indexes'][] = $index;
         }
 
-        return $this->tables[$tableName]['indexes'];
+        return $this->tables[$table]['indexes'];
     }
 
     /**
@@ -437,18 +437,18 @@ class SqliteDb extends MySqlDb {
     /**
      * {@inheritdoc}
      */
-    public function insert($tableName, array $rows, array $options = []) {
+    public function insert($table, array $rows, array $options = []) {
         // Sqlite doesn't support upsert so do upserts manually.
         if (self::val(Db::OPTION_UPSERT, $options)) {
             unset($options[Db::OPTION_UPSERT]);
 
-            $keys = $this->getPKValue($tableName, $rows, true);
+            $keys = $this->getPKValue($table, $rows, true);
             if (!$keys) {
                 throw new \Exception("Cannot upsert with no key.", 500);
             }
             // Try updating first.
             $updated = $this->update(
-                $tableName,
+                $table,
                 array_diff_key($rows, $keys),
                 $keys,
                 $options
@@ -463,7 +463,7 @@ class SqliteDb extends MySqlDb {
             }
         }
 
-        $result = parent::insert($tableName, $rows, $options);
+        $result = parent::insert($table, $rows, $options);
         return $result;
     }
 

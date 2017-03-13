@@ -226,7 +226,7 @@ class Query {
      * Execute this query against a database.
      *
      * @param Db $db The database to query.
-     * @return array Returns the query result.
+     * @return \PDOStatement Returns the query result.
      */
     public function exec(Db $db) {
         $options = [

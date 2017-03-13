@@ -24,7 +24,11 @@ trait MySqlTestTrait {
             "mysql:host=127.0.0.1;charset=utf8",
             'travis',
             '',
-            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+            [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+//                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true
+            ]
         );
         $pdo->query("create database if not exists `phpunit_garden`");
         $pdo->query("use `phpunit_garden`");

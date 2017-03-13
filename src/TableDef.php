@@ -122,7 +122,7 @@ class TableDef implements \JsonSerializable {
         $this->columns[$name] = $column;
 
         // Add the pk index.
-        $this->index($name, Db::INDEX_PK);
+        $this->index(Db::INDEX_PK, $name);
 
         return $this;
     }
@@ -144,15 +144,12 @@ class TableDef implements \JsonSerializable {
     /**
      * Add or update an index.
      *
-     * @param string|array $columns An array of columns or a single column name.
      * @param string $type One of the `Db::INDEX_*` constants.
-     * @param string $suffix An index suffix to group columns together in an index.
-     * @return TableDef Returns $this for fluent calls.
+     * @param array $columns The columns in the index.
+     * @return $this
      */
-    public function index($columns, $type, $suffix = '') {
+    public function index($type, ...$columns) {
         $type = strtolower($type);
-        $columns = (array)$columns;
-        $suffix = strtolower($suffix);
 
         // Look for a current index row.
         $currentIndex = null;
@@ -161,31 +158,20 @@ class TableDef implements \JsonSerializable {
                 continue;
             }
 
-            $indexSuffix = empty($index['suffix']) ? '' : $index['suffix'];
-
-            if ($type === Db::INDEX_PK ||
-                ($type === Db::INDEX_UNIQUE && $suffix == $indexSuffix) ||
-                ($type === Db::INDEX_IX && $suffix && $suffix == $indexSuffix) ||
-                ($type === Db::INDEX_IX && !$suffix && array_diff($index['columns'], $columns) == [])
-            ) {
+            if ($type === Db::INDEX_PK || array_diff($index['columns'], $columns) == []) {
                 $currentIndex =& $this->indexes[$i];
                 break;
             }
         }
 
         if ($currentIndex) {
-            $currentIndex['columns'] = array_unique(array_merge($currentIndex['columns'], $columns));
+            $currentIndex['columns'] = $columns;
         } else {
             $indexDef = [
                 'type' => $type,
                 'columns' => $columns,
-                'suffix' => $suffix
             ];
-            if ($type === Db::INDEX_PK) {
-                $this->indexes[Db::INDEX_PK] = $indexDef;
-            } else {
-                $this->indexes[] = $indexDef;
-            }
+            $this->indexes[] = $indexDef;
         }
 
         return $this;

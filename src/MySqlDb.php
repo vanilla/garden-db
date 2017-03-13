@@ -34,178 +34,91 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    public function dropTable($tableName, array $options = []) {
+    protected function dropTableDb($table, array $options = []) {
         $sql = 'drop table '.
-            (self::val(Db::OPTION_IGNORE, $options) ? 'if exists ' : '').
-            $this->prefixTable($tableName);
-        $result = $this->query($sql, Db::QUERY_DEFINE);
-        unset($this->tables[strtolower($tableName)]);
+            ($options[Db::OPTION_IGNORE] ? 'if exists ' : '').
+            $this->prefixTable($table);
 
-        return $result;
-    }
-
-    /**
-     * Execute a query on the database.
-     *
-     * @param string $sql The sql query to execute.
-     * @param string $type One of the Db::QUERY_* constants.
-     *
-     * Db::QUERY_READ
-     * : The query reads from the database.
-     *
-     * Db::QUERY_WRITE
-     * : The query writes to the database.
-     *
-     * Db::QUERY_DEFINE
-     * : The query alters the structure of the datbase.
-     *
-     * @param array $options Additional options for the query.
-     *
-     * Db::OPTION_MODE
-     * : Override {@link Db::$mode}.
-     *
-     * @return array|string|PDOStatement|int Returns the result of the query.
-     *
-     * array
-     * : Returns an array when reading from the database and the mode is {@link Db::MODE_EXEC}.
-     * string
-     * : Returns the sql query when the mode is {@link Db::MODE_SQL}.
-     * PDOStatement
-     * : Returns a {@link \PDOStatement} when the mode is {@link Db::MODE_PDO}.
-     * int
-     * : Returns the number of rows affected when performing an update or an insert.
-     */
-    public function query($sql, $type = Db::QUERY_READ, $options = []) {
-        $options += [
-            Db::OPTION_MODE => $this->mode
-        ];
-        $mode = $options[Db::OPTION_MODE];
-
-        if ($mode & Db::MODE_ECHO) {
-            echo trim($sql, "\n;").";\n\n";
-        }
-        if ($mode & Db::MODE_SQL) {
-            return $sql;
-        }
-
-        $result = null;
-        if ($mode & Db::MODE_EXEC) {
-            $result = $this->getPDO()->query($sql);
-
-            if ($type == Db::QUERY_READ) {
-                $result->setFetchMode(PDO::FETCH_ASSOC);
-                $result = $result->fetchAll();
-                $this->rowCount = count($result);
-            } elseif (is_object($result) && method_exists($result, 'rowCount')) {
-                $this->rowCount = $result->rowCount();
-                $result = $this->rowCount;
-            }
-        } elseif ($mode & Db::MODE_PDO) {
-            /* @var \PDOStatement $result */
-            $result = $this->getPDO()->prepare($sql);
-        }
-
-        return $result;
+        $this->queryDefine($sql);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getTableDef($table) {
-        $tableDef = parent::getTableDef($table);
-        if ($tableDef || $tableDef === null) {
-            return $tableDef;
+    protected function getTableDefDb($table) {
+        $columns = $this->getColumnDefsDb($table);
+
+        if (empty($columns)) {
+            // A table with no columns does not exist.
+            return null;
         }
 
-        $ltablename = strtolower($table);
-        $tableDef = self::val($ltablename, $this->tables, []);
-        if (!isset($tableDef['columns'])) {
-            $columns = $this->getColumns($table);
-            if ($columns === null) {
-                // A table with no columns does not exist.
-                $this->tables[$ltablename] = ['name' => $table];
-                return null;
-            }
+        $indexes = $this->getIndexesDb($table);
 
-            $tableDef['columns'] = $columns;
-        }
-        if (!isset($tableDef['indexes'])) {
-            $tableDef['indexes'] = $this->getIndexes($table);
-        }
-        $tableDef['name'] = $table;
-        $this->tables[$ltablename] = $tableDef;
+        $tableDef = [
+            'name' => $table,
+            'columns' => $columns,
+            'indexes' => $indexes
+        ];
+
         return $tableDef;
     }
 
     /**
-     * Get the columns for tables and put them in {MySqlDb::$tables}.
-     *
-     * @param string $tableName The table to get the columns for or blank for all columns.
-     * @return array|null Returns an array of columns if {@link $tablename} is specified, or null otherwise.
+     * {@inheritdoc}
      */
-    protected function getColumns($tableName = '') {
-        $ltablename = strtolower($tableName);
-        /* @var \PDOStatement $stmt */
-        $stmt = $this->get(
-            new Literal('information_schema.COLUMNS'),
+    protected function getColumnDefsDb($table) {
+        $rows = $this->get(
+            new Identifier('information_schema', 'COLUMNS'),
             [
                 'TABLE_SCHEMA' => $this->getDbName(),
-                'TABLE_NAME' => $tableName ? $this->getPx().$tableName : [Db::OP_LIKE => $this->escapeLike($this->getPx()).'%']
+                'TABLE_NAME' => $this->prefixTable($table, false)
             ],
             [
-                'columns' => [
-                    'TABLE_NAME',
-                    'COLUMN_TYPE',
-                    'IS_NULLABLE',
-                    'EXTRA',
-                    'COLUMN_KEY',
-                    'COLUMN_DEFAULT',
-                    'COLUMN_NAME'
-                ],
-                Db::OPTION_MODE => Db::MODE_PDO,
+                Db::OPTION_FETCH_MODE => PDO::FETCH_ASSOC,
                 'order' => ['TABLE_NAME', 'ORDINAL_POSITION']
             ]
         );
 
-        $stmt->execute();
-        $tablecolumns = $stmt->fetchAll(PDO::FETCH_ASSOC | PDO::FETCH_GROUP);
+        $columns = [];
+        foreach ($rows as $row) {
+            $column = [
+                'dbtype' => $row['DATA_TYPE'],
+                'allowNull' => strcasecmp($row['IS_NULLABLE'], 'YES') === 0,
+            ];
 
-        foreach ($tablecolumns as $ctablename => $cdefs) {
-            $ctablename = strtolower(ltrim_substr($ctablename, $this->getPx()));
-            $columns = [];
-
-            foreach ($cdefs as $cdef) {
-                $column = [
-                    'dbtype' => $this->columnTypeString($cdef['COLUMN_TYPE']),
-                    'allowNull' => force_bool($cdef['IS_NULLABLE']),
-                ];
-                if ($cdef['EXTRA'] === 'auto_increment') {
-                    $column['autoIncrement'] = true;
-                }
-                if ($cdef['COLUMN_KEY'] === 'PRI') {
-                    $column['primary'] = true;
-                }
-
-                if ($cdef['COLUMN_DEFAULT'] !== null) {
-                    $column['default'] = $this->forceType($cdef['COLUMN_DEFAULT'], $column['dbtype']);
-                }
-
-                $columns[$cdef['COLUMN_NAME']] = $column;
+            if ($column['dbtype'] === 'enum' && preg_match_all("`'([^']+)'`", $row['COLUMN_TYPE'], $matches)) {
+                $column['enum'] = $matches[1];
             }
-            $this->tables[$ctablename]['columns'] = $columns;
+
+            if ($maxLength = $row['CHARACTER_MAXIMUM_LENGTH']) {
+                $columns['maxLength'] = (int)$maxLength;
+            }
+
+            if (($default = $row['COLUMN_DEFAULT']) !== null) {
+                $column['default'] = $this->forceType($default, $column['dbtype']);
+            }
+
+            if ($row['EXTRA'] === 'auto_increment') {
+                $column['autoIncrement'] = true;
+            }
+
+            if ($row['COLUMN_KEY'] === 'PRI') {
+                $column['primary'] = true;
+            }
+
+            $columns[$row['COLUMN_NAME']] = $column;
         }
-        if ($ltablename && isset($this->tables[$ltablename]['columns'])) {
-            return $this->tables[$ltablename]['columns'];
-        }
-        return null;
+
+        return $columns;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function get($tableName, array $where, array $options = []) {
-        $sql = $this->buildSelect($tableName, $where, $options);
-        $result = $this->query($sql, Db::QUERY_READ, $options);
+    public function get($table, array $where, array $options = []) {
+        $sql = $this->buildSelect($table, $where, $options);
+        $result = $this->queryStatement($sql, [], $options);
         return $result;
     }
 
@@ -490,123 +403,72 @@ class MySqlDb extends Db {
     /**
      * Get the indexes from the database.
      *
-     * @param string $tableName The name of the table to get the indexes for or an empty string to get all indexes.
+     * @param string $table The name of the table to get the indexes for.
      * @return array|null
      */
-    protected function getIndexes($tableName = '') {
-        $ltablename = strtolower($tableName);
-        /* @var \PDOStatement */
-        $stmt = $this->get(
-            new Literal('information_schema.STATISTICS'),
+    protected function getIndexesDb($table = '') {
+        $stm = $this->get(
+            new Identifier('information_schema', 'STATISTICS'),
             [
                 'TABLE_SCHEMA' => $this->getDbName(),
-                'TABLE_NAME' => $tableName ? $this->getPx().$tableName : [Db::OP_LIKE => $this->escapeLike($this->getPx()).'%']
+                'TABLE_NAME' => $this->prefixTable($table, false)
             ],
             [
                 'columns' => [
                     'INDEX_NAME',
-                    'TABLE_NAME',
-                    'NON_UNIQUE',
-                    'COLUMN_NAME'
+                    'COLUMN_NAME',
+                    'NON_UNIQUE'
                 ],
-                'order' => ['TABLE_NAME', 'INDEX_NAME', 'SEQ_IN_INDEX'],
-                Db::OPTION_MODE => Db::MODE_PDO
+                'order' => ['INDEX_NAME', 'SEQ_IN_INDEX']
             ]
         );
+        $indexRows = $stm->fetchAll(PDO::FETCH_ASSOC | PDO::FETCH_GROUP);
 
-        $stmt->execute();
-        $indexDefs = $stmt->fetchAll(PDO::FETCH_ASSOC | PDO::FETCH_GROUP);
-
-        foreach ($indexDefs as $indexName => $indexRows) {
-            $row = reset($indexRows);
-            $itablename = strtolower(ltrim_substr($row['TABLE_NAME'], $this->getPx()));
+        $indexes = [];
+        foreach ($indexRows as $indexName => $columns) {
             $index = [
-                'name' => $indexName,
-                'columns' => array_column($indexRows, 'COLUMN_NAME')
+                'type' => null,
+                'columns' => array_column($columns, 'COLUMN_NAME'),
+                'name' => $indexName
             ];
 
             if ($indexName === 'PRIMARY') {
                 $index['type'] = Db::INDEX_PK;
-                $this->tables[$itablename]['indexes'][Db::INDEX_PK] = $index;
             } else {
-                $index['type'] = $row['NON_UNIQUE'] ? Db::INDEX_IX : Db::INDEX_UNIQUE;
-                $this->tables[$itablename]['indexes'][] = $index;
+                $index['type'] = $columns[0]['NON_UNIQUE'] ? Db::INDEX_IX : Db::INDEX_UNIQUE;
             }
+            $indexes[] = $index;
         }
 
-        if ($ltablename) {
-            return valr([$ltablename, 'indexes'], $this->tables, []);
-        }
-        return null;
+        return $indexes;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getAllTables($withDefs = false) {
-        $tables = parent::getAllTables($withDefs);
-        if ($tables !== null) {
-            return $tables;
-        }
-
-        // Grab the table names first.
-        if ($this->allTablesFetched & Db::FETCH_TABLENAMES) {
-            $tablenames = array_keys($this->tables);
-        } else {
-            $tablenames = $this->getTableNames();
-            $this->tables = [];
-            foreach ($tablenames as $tablename) {
-                $this->tables[strtolower($tablename)] = ['name' => $tablename];
-            }
-            $this->allTablesFetched = Db::FETCH_TABLENAMES;
-        }
-
-        if (!$withDefs) {
-            return $tablenames;
-        }
-
-        $this->getColumns();
-        $this->allTablesFetched |= Db::FETCH_COLUMNS;
-
-        $this->getIndexes();
-        $this->allTablesFetched |= Db::FETCH_INDEXES;
-
-        return $this->tables;
-    }
-
-    /**
-     * Get the all of table names in the database.
-     *
-     * @return array Returns an array of table names with prefixes stripped.
-     */
-    protected function getTableNames() {
+    protected function getTableNamesDb() {
         // Get the table names.
-        $tables = (array)$this->get(
+        $tables = $this->get(
             new Identifier('information_schema', 'TABLES'),
             [
                 'TABLE_SCHEMA' => $this->getDbName(),
                 'TABLE_NAME' => [Db::OP_LIKE => $this->escapeLike($this->getPx()).'%']
             ],
             [
-                'columns' => ['TABLE_NAME']
+                'columns' => ['TABLE_NAME'],
+                'fetchMode' => PDO::FETCH_ASSOC
             ]
         );
 
-        // Strip the table prefixes.
-        $tables = array_map(function ($name) {
-            return ltrim_substr($name, $this->getPx());
-        }, array_column($tables, 'TABLE_NAME'));
-
-        return $tables;
+        return $tables->fetchAll(PDO::FETCH_COLUMN);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function insert($tableName, array $rows, array $options = []) {
-        $sql = $this->buildInsert($tableName, $rows, $options);
-        $this->query($sql, Db::QUERY_WRITE);
-        $id = $this->getPDO()->lastInsertId();
+    public function insert($table, array $rows, array $options = []) {
+        $sql = $this->buildInsert($table, $rows, $options);
+        $id = $this->queryID($sql, [], $options);
         if (is_numeric($id)) {
             return (int)$id;
         } else {
@@ -670,7 +532,7 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    public function load($tableName, $rows, array $options = []) {
+    public function load($table, $rows, array $options = []) {
         $count = 0;
         $first = true;
         $spec = [];
@@ -684,7 +546,7 @@ class MySqlDb extends Db {
                     $spec[$key] = new Literal($this->paramName($key));
                 }
 
-                $sql = $this->buildInsert($tableName, $spec, $options);
+                $sql = $this->buildInsert($table, $spec, $options);
                 $stmt = $this->getPDO()->prepare($sql);
                 $first = false;
             }
@@ -697,7 +559,7 @@ class MySqlDb extends Db {
     }
 
     /**
-     * Make a valid pdo parameter name from a string.
+     * Make a valid PDO parameter name from a string.
      *
      * This method replaces invalid placeholder characters with underscores.
      *
@@ -712,14 +574,10 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    public function update($tableName, array $set, array $where, array $options = []) {
-        $sql = $this->buildUpdate($tableName, $set, $where, $options);
-        $result = $this->query($sql, Db::QUERY_WRITE);
+    public function update($table, array $set, array $where, array $options = []) {
+        $sql = $this->buildUpdate($table, $set, $where, $options);
+        $result = $this->queryModify($sql, [], $options);
 
-        if ($result instanceof \PDOStatement) {
-            /* @var \PDOStatement $result */
-            return $result->rowCount();
-        }
         return $result;
     }
 
@@ -756,20 +614,20 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    public function delete($tableName, array $where, array $options = []) {
+    public function delete($table, array $where, array $options = []) {
         if (self::val(Db::OPTION_TRUNCATE, $options)) {
             if (!empty($where)) {
-                throw new \InvalidArgumentException("You cannot truncate $tableName with a where filter.", 500);
+                throw new \InvalidArgumentException("You cannot truncate $table with a where filter.", 500);
             }
-            $sql = 'truncate table '.$this->prefixTable($tableName);
+            $sql = 'truncate table '.$this->prefixTable($table);
         } else {
-            $sql = 'delete from '.$this->prefixTable($tableName);
+            $sql = 'delete from '.$this->prefixTable($table);
 
             if (!empty($where)) {
                 $sql .= "\nwhere ".$this->buildWhere($where);
             }
         }
-        return $this->query($sql, Db::QUERY_WRITE);
+        return $this->queryModify($sql, [], $options);
     }
 
     /**
@@ -800,7 +658,7 @@ class MySqlDb extends Db {
             $sql .= "\n collate {$options['collate']}";
         }
 
-        $this->query($sql, Db::QUERY_DEFINE);
+        $this->queryDefine($sql, $options);
     }
 
     /**
@@ -893,7 +751,7 @@ class MySqlDb extends Db {
             'table '.$this->prefixTable($tablename)."\n  ".
             implode(",\n  ", $parts);
 
-        $result = $this->query($sql, Db::QUERY_DEFINE);
+        $result = $this->queryDefine($sql, $options);
         return $result;
     }
 
