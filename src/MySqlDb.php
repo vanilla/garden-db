@@ -13,6 +13,8 @@ use PDO;
  * A {@link Db} class for connecting to MySQL.
  */
 class MySqlDb extends Db {
+    const MYSQL_DATE_FORMAT = 'Y-m-d H:i:s';
+
     /**
      * @var string
      */

@@ -40,6 +40,14 @@ abstract class Db {
     const OP_AND = '$and';
     const OP_OR = '$or';
 
+    /**
+     * @var string[] Maps PDO drivers to db classes.
+     */
+    private static $drivers = [
+        'mysql' => MySqlDb::class,
+        'sqlite' => SqliteDb::class
+    ];
+
     private static $types = [
 
     ];
@@ -83,7 +91,22 @@ abstract class Db {
         $this->setDefaultFetchMode($fetchMode === PDO::FETCH_BOTH ? PDO::FETCH_ASSOC: $fetchMode);
     }
 
-    /// Methods ///
+    /**
+     * Get the name of the class that handles a database driver.
+     *
+     * @param string|PDO $driver The name of the driver or a database connection.
+     * @return null|string Returns the driver classname or **null** if one isn't found.
+     */
+    public static function driverClass($driver) {
+        if ($driver instanceof PDO) {
+            $name = $driver->getAttribute(PDO::ATTR_DRIVER_NAME);
+        } else {
+            $name = (string)$driver;
+        }
+
+        $name = strtolower($name);
+        return isset(self::$drivers[$name]) ? self::$drivers[$name] : null;
+    }
 
     /**
      * Add a table to the database.
