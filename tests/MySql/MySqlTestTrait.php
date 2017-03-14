@@ -12,7 +12,14 @@ use Garden\Db\MySqlDb;
 use PDO;
 
 trait MySqlTestTrait {
-    abstract protected static function getPx();
+    protected static function getPx() {
+        $px = 'db_';
+        if (preg_match('`MySql(?:Db)?([a-z]+?)Test$`i', get_called_class(), $m)) {
+            $px = (strtolower($m[1]) ?: 'db').'_';
+        }
+
+        return $px;
+    }
 
     /**
      * Get the database connection for the test.

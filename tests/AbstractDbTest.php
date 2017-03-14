@@ -194,6 +194,6 @@ abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
     protected function createPopulatedUserTable($name, $count = 10) {
         $this->getUserTableDef($name)->exec(self::$db);
 
-        self::$db->load($name, $this->provideUsers(10));
+        self::$db->load($name, $this->provideUsers($count));
     }
 }

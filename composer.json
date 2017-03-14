@@ -10,7 +10,7 @@
 	],
 	"require": {
 		"php": ">=5.6.0",
-		"vanilla/garden-schema": "^1.2"
+		"vanilla/garden-schema": "^1.4"
 	},
 	"require-dev": {
 		"bobthecow/faker": "dev-master"

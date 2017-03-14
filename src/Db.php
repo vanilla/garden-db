@@ -13,6 +13,8 @@ use PDO;
  * Defines a standard set of methods that all database drivers must conform to.
  */
 abstract class Db {
+    use FetchModeTrait;
+
     const QUERY_DEFINE = 'define';
     const QUERY_READ = 'read';
     const QUERY_WRITE = 'write';
@@ -123,11 +125,6 @@ abstract class Db {
     private $pdo;
 
     /**
-     * @var array The default fetch mode.
-     */
-    private $defaultFetchMode = 0;
-
-    /**
      * Initialize an instance of the {@link MySqlDb} class.
      *
      * @param PDO $pdo The connection to the database.
@@ -138,7 +135,7 @@ abstract class Db {
         $this->px = $px;
 
         $fetchMode = $this->pdo->getAttribute(PDO::ATTR_DEFAULT_FETCH_MODE);
-        $this->setDefaultFetchMode($fetchMode === PDO::FETCH_BOTH ? PDO::FETCH_ASSOC: $fetchMode);
+        $this->setFetchMode($fetchMode === PDO::FETCH_BOTH ? PDO::FETCH_ASSOC: $fetchMode);
     }
 
     /**
@@ -282,7 +279,7 @@ abstract class Db {
             return null;
         }
 
-        $columnDefs = $this->fetchColumnDefs($table);
+        $columnDefs = $this->fetchColumnDefsDb($table);
         if ($columnDefs !== null) {
             $this->tables[$tableKey]['columns'] = $columnDefs;
         }
@@ -738,7 +735,7 @@ abstract class Db {
      * @throws \PDOException Throws an exception if something went wrong during the query.
      */
     protected function query($sql, array $params = [], array $options = []) {
-        $options += [Db::OPTION_FETCH_MODE => $this->defaultFetchMode];
+        $options += [Db::OPTION_FETCH_MODE => $this->fetchMode];
 
         $stm = $this->getPDO()->prepare($sql);
         $r = $stm->execute($params);
@@ -920,30 +917,6 @@ abstract class Db {
      */
     public function setPDO(PDO $pdo) {
         $this->pdo = $pdo;
-        return $this;
-    }
-
-    /**
-     * Get the default fetch mode.
-     *
-     * @return array|int Returns the default fetch mode.
-     */
-    public function getDefaultFetchMode() {
-        if (count($this->defaultFetchMode) === 1) {
-            return $this->defaultFetchMode[0];
-        } else {
-            return $this->defaultFetchMode;
-        }
-    }
-
-    /**
-     * Set the default fetch mode..
-     *
-     * @param array $mode This should be arguments compatible with {@link PDO::setFetchMode()}.
-     * @return $this
-     */
-    public function setDefaultFetchMode(...$mode) {
-        $this->defaultFetchMode = $mode;
         return $this;
     }
 }
