@@ -12,9 +12,7 @@ use Garden\Db\MySqlDb;
 use PDO;
 
 trait MySqlTestTrait {
-    protected static function getPx() {
-        return '';
-    }
+    abstract protected static function getPx();
 
     /**
      * Get the database connection for the test.

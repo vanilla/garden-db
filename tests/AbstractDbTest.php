@@ -21,6 +21,15 @@ abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
      */
     protected static $db;
 
+    protected static function getPx() {
+        $px = 'db_';
+        if (preg_match('`Db(.+)Test$`i', get_called_class(), $m)) {
+            $px = (strtolower($m[1]) ?: 'db').'_';
+        }
+
+        return $px;
+    }
+
     /// Methods ///
 
     /**
@@ -28,9 +37,7 @@ abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
      *
      * @return Db Returns the db object.
      */
-    protected static function createDb() {
-        return null;
-    }
+    abstract protected static function createDb();
 
     /**
      * Get the database def.

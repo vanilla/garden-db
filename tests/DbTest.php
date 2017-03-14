@@ -10,6 +10,7 @@ namespace Garden\Db\Tests;
 use Garden\Db\Db;
 use Garden\Db\Query;
 use Garden\Db\TableDef;
+use PDO;
 
 /**
  * Test the basic functionality of the Db* classes.
@@ -396,5 +397,11 @@ abstract class DbTest extends AbstractDbTest {
         $order = ['-userID', 'name'];
         $dbUsers = self::$db->get($table, [], ['order' => $order]);
         $this->assertOrder($dbUsers, $order);
+    }
+
+    public function testPDOStatementReuse() {
+        $this->createPopulatedUserTable(__FUNCTION__);
+
+        $data = self::$db->get(__FUNCTION__, []);
     }
 }

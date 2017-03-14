@@ -12,7 +12,7 @@ use Garden\Db\SqliteDb;
 use PDO;
 
 trait SqliteTestTrait {
-    protected abstract static function getPx();
+    abstract protected static function getPx();
 
     /**
      * Get the database connection for the test.
