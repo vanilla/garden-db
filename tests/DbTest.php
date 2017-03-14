@@ -42,7 +42,7 @@ abstract class DbTest extends AbstractDbTest {
 
         self::$db->defineTable($tableDef);
 
-        return self::$db->getTableDef('user');
+        return self::$db->fetchTableDef('user');
     }
 
     /**

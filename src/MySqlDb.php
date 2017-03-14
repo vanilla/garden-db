@@ -44,8 +44,8 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    protected function getTableDefDb($table) {
-        $columns = $this->getColumnDefsDb($table);
+    protected function fetchTableDefDb($table) {
+        $columns = $this->fetchColumnDefsDb($table);
 
         if (empty($columns)) {
             // A table with no columns does not exist.
@@ -66,7 +66,7 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    protected function getColumnDefsDb($table) {
+    protected function fetchColumnDefsDb($table) {
         $rows = $this->get(
             new Identifier('information_schema', 'COLUMNS'),
             [
@@ -456,7 +456,7 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    protected function getTableNamesDb() {
+    protected function fetchTableNamesDb() {
         // Get the table names.
         $tables = $this->get(
             new Identifier('information_schema', 'TABLES'),

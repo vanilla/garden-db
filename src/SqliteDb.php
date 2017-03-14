@@ -29,7 +29,7 @@ class SqliteDb extends MySqlDb {
      * @param array $options An array of options for the migration.
      */
     private function alterTableMigrate($tablename, array $alterDef, array $options = []) {
-        $currentDef = $this->getTableDef($tablename);
+        $currentDef = $this->fetchTableDef($tablename);
 
         // Merge the table definitions if we aren't dropping stuff.
         if (!self::val(Db::OPTION_DROP, $options)) {
@@ -326,7 +326,7 @@ class SqliteDb extends MySqlDb {
      * @param string $table The table to get the columns for.
      * @return array|null Returns an array of columns.
      */
-    protected function getColumnDefsDb($table) {
+    protected function fetchColumnDefsDb($table) {
         $cdefs = $this->queryStatement('pragma table_info('.$this->prefixTable($table, false).')')->fetchAll(PDO::FETCH_ASSOC);
         if (empty($cdefs)) {
             return null;
@@ -411,7 +411,7 @@ class SqliteDb extends MySqlDb {
             return [$tablename.'ID' => $row[$tablename.'ID']];
         }
 
-        $tdef = $this->getTableDef($tablename);
+        $tdef = $this->fetchTableDef($tablename);
         $cols = [];
         foreach ($tdef['columns'] as $name => $cdef) {
             if (empty($cdef['primary'])) {
@@ -431,7 +431,7 @@ class SqliteDb extends MySqlDb {
      *
      * @return array Returns an array of table names.
      */
-    protected function getTableNamesDb() {
+    protected function fetchTableNamesDb() {
         // Get the table names.
         $tables = $this->get(
             new Identifier('sqlite_master'),

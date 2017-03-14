@@ -32,7 +32,7 @@ abstract class DbDefTest extends AbstractDbTest {
             ->toArray();
 
         $db->defineTable($def->toArray());
-        $def2 = $db->getTableDef('user');
+        $def2 = $db->fetchTableDef('user');
 
         $this->assertDefEquals($def1, $def2);
     }
@@ -59,7 +59,7 @@ abstract class DbDefTest extends AbstractDbTest {
 
         $db->defineTable($expected);
         $db->reset();
-        $actual = $db->getTableDef($tbl);
+        $actual = $db->fetchTableDef($tbl);
 
         $this->assertDefEquals($expected, $actual);
     }
@@ -88,7 +88,7 @@ abstract class DbDefTest extends AbstractDbTest {
 
         $actual = $db
             ->reset()
-            ->getTableDef($tbl);
+            ->fetchTableDef($tbl);
 
         $this->assertDefEquals($expected, $actual, false);
     }
@@ -109,10 +109,10 @@ abstract class DbDefTest extends AbstractDbTest {
         $def->addIndex(Db::INDEX_PK, 'col1', 'col2')
             ->exec($db);
 
-        $expected = $db->getTableDef($tbl);
+        $expected = $db->fetchTableDef($tbl);
 
         $db->reset();
-        $actual = $db->getTableDef($tbl);
+        $actual = $db->fetchTableDef($tbl);
 
         $this->assertDefEquals($expected, $actual);
     }
@@ -137,16 +137,16 @@ abstract class DbDefTest extends AbstractDbTest {
             ->addIndex(Db::INDEX_PK, 'col2', 'col1');
         $db->defineTable($def->toArray());
 
-        $expected = $db->getTableDef($tbl);
+        $expected = $db->fetchTableDef($tbl);
 
         $actual = $db
             ->reset()
-            ->getTableDef($tbl);
+            ->fetchTableDef($tbl);
 
         $this->assertDefEquals($expected, $actual);
 
         $db->reset();
-        $actual =  $db->getTableDef($tbl);
+        $actual =  $db->fetchTableDef($tbl);
 
         $this->assertDefEquals($expected, $actual);
     }

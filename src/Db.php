@@ -204,12 +204,12 @@ abstract class Db {
      *
      * @return string[] Returns an array of table names without prefixes.
      */
-    final public function getTableNames() {
+    final public function fetchTableNames() {
         if ($this->tableNames !== null) {
             return array_values($this->tableNames);
         }
 
-        $names = $this->getTableNamesDb();
+        $names = $this->fetchTableNamesDb();
 
         $this->tableNames = [];
         foreach ($names as $name) {
@@ -227,7 +227,7 @@ abstract class Db {
      *
      * @return string[]
      */
-    abstract protected function getTableNamesDb();
+    abstract protected function fetchTableNamesDb();
 
     /**
      * Get a table definition.
@@ -235,7 +235,7 @@ abstract class Db {
      * @param string $table The name of the table.
      * @return array|null Returns the table definition or null if the table does not exist.
      */
-    final public function getTableDef($table) {
+    final public function fetchTableDef($table) {
         $tableKey = strtolower($table);
 
         // First check the table cache.
@@ -249,7 +249,7 @@ abstract class Db {
             return null;
         }
 
-        $tableDef = $this->getTableDefDb($table);
+        $tableDef = $this->fetchTableDefDb($table);
         if ($tableDef !== null) {
             $this->fixIndexes($tableDef['name'], $tableDef);
             $this->tables[$tableKey] = $tableDef;
@@ -264,7 +264,7 @@ abstract class Db {
      * @param string $table The name of the table to get.
      * @return array|null Returns the table def or **null** if the table doesn't exist.
      */
-    abstract protected function getTableDefDb($table);
+    abstract protected function fetchTableDefDb($table);
 
 
     /**
@@ -273,7 +273,7 @@ abstract class Db {
      * @param string $table The name of the table to get the columns for.
      * @return array|null Returns an array of column definitions.
      */
-    final public function getColumnDefs($table) {
+    final public function fetchColumnDefs($table) {
         $tableKey = strtolower($table);
 
         if (!empty($this->tables[$tableKey]['columns'])) {
@@ -282,7 +282,7 @@ abstract class Db {
             return null;
         }
 
-        $columnDefs = $this->getColumnDefs($table);
+        $columnDefs = $this->fetchColumnDefs($table);
         if ($columnDefs !== null) {
             $this->tables[$tableKey]['columns'] = $columnDefs;
         }
@@ -295,7 +295,7 @@ abstract class Db {
      * @param string $table The name of the table to fetch the columns for.
      * @return array|null
      */
-    abstract protected function getColumnDefsDb($table);
+    abstract protected function fetchColumnDefsDb($table);
 
     /**
      * Get the canonical type based on a type string.
@@ -431,7 +431,7 @@ abstract class Db {
         $tableName = $tableDef['name'];
         $tableKey = strtolower($tableName);
         $tableDef['name'] = $tableName;
-        $curTable = $this->getTableDef($tableName);
+        $curTable = $this->fetchTableDef($tableName);
 
         $this->fixIndexes($tableName, $tableDef, $curTable);
 
