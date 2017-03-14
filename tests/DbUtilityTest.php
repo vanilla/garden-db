@@ -22,9 +22,7 @@ abstract class DbUtilityTest extends AbstractDbTest {
      * @dataProvider provideGetTypeTests
      */
     public function testGetType($type, $expected) {
-        $db = self::$db;
-
-        $schema = $db->getType($type);
+        $schema = Db::typeDef($type);
         $this->assertEquals($expected, $schema);
     }
 

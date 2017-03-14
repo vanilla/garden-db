@@ -303,7 +303,7 @@ abstract class Db {
      * @param string $type A type string.
      * @return array|null Returns the type schema array or **null** if a type isn't found.
      */
-    public function getType($type) {
+    public static function typeDef($type) {
         // Remove brackets from the type.
         $brackets = null;
         if (preg_match('`^(.*)\((.*)\)$`', $type, $m)) {
@@ -374,6 +374,37 @@ abstract class Db {
     }
 
     /**
+     * Get the database type string from a type definition.
+     *
+     * This is the opposite of {@link Db::typeDef()}.
+     *
+     * @param array $typeDef The type definition array.
+     * @return string Returns a db type string.
+     */
+    protected static function dbType(array $typeDef) {
+        $dbtype = $typeDef['dbtype'];
+
+        if (!empty($typeDef['maxLength'])) {
+            $dbtype .= "({$typeDef['maxLength']})";
+        } elseif (!empty($typeDef['unsigned'])) {
+            $dbtype = 'u'.$dbtype;
+        } elseif (!empty($typeDef['precision'])) {
+            $dbtype .= "({$typeDef['precision']}";
+            if (!empty($typeDef['scale'])) {
+                $dbtype .= ",{$typeDef['scale']}";
+            }
+            $dbtype .= ')';
+        } elseif (!empty($typeDef['enum'])) {
+            $parts = array_map(function ($str) {
+                return "'{$str}'";
+            }, $typeDef['enum']);
+            $dbtype .= '('.implode(',', $parts).')';
+        }
+        return $dbtype;
+    }
+
+
+    /**
      * Get the native database type based on a type schema.
      *
      * The default implementation of this method returns the canonical db types. Individual database classes will have
@@ -382,25 +413,7 @@ abstract class Db {
      * @param array $type The type schema.
      * @return string
      */
-    protected function getNativeDbType(array $type) {
-        $dbtype = $type['dbtype'];
-
-        if (!empty($type['maxLength'])) {
-            $dbtype .= "({$type['maxLength']})";
-        } elseif (!empty($type['unsigned'])) {
-            $dbtype = 'u'.$dbtype;
-        } elseif (!empty($type['precision'])) {
-            $dbtype .= "({$type['precision']}";
-            if (!empty($type['scale'])) {
-                $dbtype .= ",{$type['scale']}";
-            }
-            $dbtype .= ')';
-        } elseif (!empty($type['enum'])) {
-            $parts = array_map([$this, 'quote'], $type['enum']);
-            $dbtype .= '('.implode(',', $parts).')';
-        }
-        return $dbtype;
-    }
+    abstract protected function nativeDbType(array $type);
 
     /**
      * Set a table definition to the database.

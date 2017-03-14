@@ -81,21 +81,16 @@ class MySqlDb extends Db {
 
         $columns = [];
         foreach ($rows as $row) {
-            $column = [
-                'dbtype' => $row['DATA_TYPE'],
-                'allowNull' => strcasecmp($row['IS_NULLABLE'], 'YES') === 0,
-            ];
-
-            if ($column['dbtype'] === 'enum' && preg_match_all("`'([^']+)'`", $row['COLUMN_TYPE'], $matches)) {
-                $column['enum'] = $matches[1];
+            $columnType = $row['COLUMN_TYPE'];
+            if ($columnType === 'tinyint(1)') {
+                $columnType = 'bool';
             }
+            $column = Db::typeDef($columnType);
 
-            if ($maxLength = $row['CHARACTER_MAXIMUM_LENGTH']) {
-                $columns['maxLength'] = (int)$maxLength;
-            }
+            $column['allowNull'] = strcasecmp($row['IS_NULLABLE'], 'YES') === 0;
 
             if (($default = $row['COLUMN_DEFAULT']) !== null) {
-                $column['default'] = $this->forceType($default, $column['dbtype']);
+                $column['default'] = $this->forceType($default, $column['type']);
             }
 
             if ($row['EXTRA'] === 'auto_increment') {
@@ -343,6 +338,26 @@ class MySqlDb extends Db {
     }
 
     /**
+     * {@inheritdoc}
+     */
+    protected function nativeDbType(array $type) {
+        static $translations = ['bool' => 'tinyint(1)', 'byte' => 'tinyint', 'short' => 'smallint', 'long' => 'bigint'];
+
+        // Translate the dbtype to a MySQL native type.
+        if (isset($translations[$type['dbtype']])) {
+            $type['dbtype'] = $translations[$type['dbtype']];
+        }
+
+        // Unsigned is represented differently in MySQL.
+        $unsigned = !empty($type['unsigned']);
+        unset ($type['unsigned']);
+
+        $dbType = static::dbType($type).($unsigned ? ' unsigned' : '');
+
+        return $dbType;
+    }
+
+    /**
      * Parse a column type string and return it in a way that is suitable for a create/alter table statement.
      *
      * @param string $typeString The string to parse.
@@ -458,8 +473,8 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    public function insert($table, array $rows, array $options = []) {
-        $sql = $this->buildInsert($table, $rows, $options);
+    public function insert($table, array $row, array $options = []) {
+        $sql = $this->buildInsert($table, $row, $options);
         $id = $this->queryID($sql, [], $options);
         if (is_numeric($id)) {
             return (int)$id;
@@ -626,23 +641,23 @@ class MySqlDb extends Db {
      * {@inheritdoc}
      */
     protected function createTable(array $tableDef, array $options = []) {
-        $tableName = $tableDef['name'];
+        $table = $tableDef['name'];
 
         // The table doesn't exist so this is a create table.
         $parts = array();
-        foreach ($tableDef['columns'] as $name => $def) {
-            $parts[] = $this->columnDefString($name, $def);
+        foreach ($tableDef['columns'] as $name => $cdef) {
+            $parts[] = $this->columnDefString($name, $cdef);
         }
 
         foreach (self::val('indexes', $tableDef, []) as $index) {
-            $indexDef = $this->indexDefString($tableName, $index);
+            $indexDef = $this->indexDefString($table, $index);
             if ($indexDef) {
                 $parts[] = $indexDef;
             }
         }
 
-        $fullTablename = $this->prefixTable($tableName);
-        $sql = "create table $fullTablename (\n  ".
+        $tableName = $this->prefixTable($table);
+        $sql = "create table $tableName (\n  ".
             implode(",\n  ", $parts).
             "\n)";
 
@@ -657,21 +672,21 @@ class MySqlDb extends Db {
      * Construct a column definition string from an array defintion.
      *
      * @param string $name The name of the column.
-     * @param array $def The column definition.
+     * @param array $cdef The column definition.
      * @return string Returns a string representing the column definition.
      */
-    protected function columnDefString($name, array $def) {
-        $result = $this->escape($name).' '.$this->columnTypeString($def['dbtype']);
+    protected function columnDefString($name, array $cdef) {
+        $result = $this->escape($name).' '.$this->nativeDbType($cdef);
 
-        if (!self::val('allowNull', $def)) {
+        if (!self::val('allowNull', $cdef)) {
             $result .= ' not null';
         }
 
-        if (isset($def['default'])) {
-            $result .= ' default '.$this->quote($def['default']);
+        if (isset($cdef['default'])) {
+            $result .= ' default '.$this->quote($cdef['default']);
         }
 
-        if (self::val('autoIncrement', $def)) {
+        if (self::val('autoIncrement', $cdef)) {
             $result .= ' auto_increment';
         }
 
@@ -752,7 +767,7 @@ class MySqlDb extends Db {
      * @param array $cdefs An array of column definitions.
      * @return array Returns an array of column orders suitable for an `alter table` statement.
      */
-    protected function getColumnOrders($cdefs) {
+    private function getColumnOrders($cdefs) {
         $orders = array_flip(array_keys($cdefs));
 
         $prev = ' first';
@@ -775,12 +790,14 @@ class MySqlDb extends Db {
 
         if ($type === 'null') {
             return null;
+        } elseif ($type === 'boolean') {
+            return filter_var($value, FILTER_VALIDATE_BOOLEAN);
         } elseif (in_array($type, ['int', 'integer', 'tinyint', 'smallint',
             'mediumint', 'bigint', 'unsigned big int', 'int2', 'int8', 'boolean'])) {
             return filter_var($value, FILTER_VALIDATE_INT);
         } elseif (in_array($type, ['real', 'double', 'double precision', 'float',
-            'numeric', 'decimal(10,5)'])) {
-            return floatval($value);
+            'numeric', 'number', 'decimal(10,5)'])) {
+            return filter_var($value, FILTER_VALIDATE_FLOAT);
         } else {
             return (string)$value;
         }

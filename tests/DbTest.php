@@ -144,11 +144,11 @@ abstract class DbTest extends AbstractDbTest {
         $dbdef = new TableDef($db);
 
         $db->dropTable('userMeta', [Db::OPTION_IGNORE => true]);
-        $dbdef->table('userMeta')
-            ->column('userID', 'int')
-            ->column('key', 'varchar(50)')
-            ->column('value', 'text')
-            ->index(Db::INDEX_PK, 'userID', 'key');
+        $dbdef->setTable('userMeta')
+            ->setColumn('userID', 'int')
+            ->setColumn('key', 'varchar(50)')
+            ->setColumn('value', 'text')
+            ->addIndex(Db::INDEX_PK, 'userID', 'key');
         $db->defineTable($dbdef->toArray());
 
         $db->insert(
@@ -335,10 +335,10 @@ abstract class DbTest extends AbstractDbTest {
         $db = self::$db;
 
         $def = new TableDef('comment');
-        $def->column('id', 'int')
-            ->column('parentID', 'int')
-            ->column('count', 'int', 0)
-            ->index(Db::INDEX_PK, 'id');
+        $def->setColumn('id', 'int')
+            ->setColumn('parentID', 'int')
+            ->setColumn('count', 'int', 0)
+            ->addIndex(Db::INDEX_PK, 'id');
         $db->defineTable($def->toArray());
 
         $rows = [

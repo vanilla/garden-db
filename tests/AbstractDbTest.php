@@ -168,12 +168,12 @@ abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
      */
     protected function getUserTableDef($name) {
         $def = new TableDef($name);
-        $def->primaryKey('userID')
-            ->column('name', 'varchar(50)')
-            ->column('email', 'varchar(255)')
-            ->column('fullName', 'varchar(50)')
-            ->column('insertTime', 'int')
-            ->index(Db::INDEX_IX, 'name');
+        $def->setPrimaryKey('userID')
+            ->setColumn('name', 'varchar(50)')
+            ->setColumn('email', 'varchar(255)')
+            ->setColumn('fullName', 'varchar(50)')
+            ->setColumn('insertTime', 'int')
+            ->addIndex(Db::INDEX_IX, 'name');
 
         return $def;
     }

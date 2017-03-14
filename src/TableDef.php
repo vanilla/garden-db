@@ -70,8 +70,8 @@ class TableDef implements \JsonSerializable {
      * : The column is required and this is its default.
      * @return TableDef
      */
-    public function column($name, $type, $nullDefault = false) {
-        $this->columns[$name] = $this->columnDef($type, $nullDefault);
+    public function setColumn($name, $type, $nullDefault = false) {
+        $this->columns[$name] = $this->createColumnDef($type, $nullDefault);
 
         return $this;
     }
@@ -79,7 +79,7 @@ class TableDef implements \JsonSerializable {
     /**
      * Get an array column def from a structured function call.
      *
-     * @param string $type The database type of the column.
+     * @param string $dbtype The database type of the column.
      * @param mixed $nullDefault Whether or not to allow null or the default value.
      *
      * null|true
@@ -91,8 +91,12 @@ class TableDef implements \JsonSerializable {
      *
      * @return array Returns the column def as an array.
      */
-    protected function columnDef($type, $nullDefault = false) {
-        $column = ['dbtype' => $type];
+    private function createColumnDef($dbtype, $nullDefault = false) {
+        $column = Db::typeDef($dbtype);
+
+        if ($column === null) {
+            throw new \InvalidArgumentException("Unknown type '$dbtype'.", 500);
+        }
 
         if ($nullDefault === null || $nullDefault == true) {
             $column['allowNull'] = true;
@@ -114,31 +118,17 @@ class TableDef implements \JsonSerializable {
      * @param string $type The datatype for the column.
      * @return TableDef
      */
-    public function primaryKey($name, $type = 'int') {
-        $column = $this->columnDef($type, false);
+    public function setPrimaryKey($name, $type = 'int') {
+        $column = $this->createColumnDef($type, false);
         $column['autoIncrement'] = true;
         $column['primary'] = true;
 
         $this->columns[$name] = $column;
 
         // Add the pk index.
-        $this->index(Db::INDEX_PK, $name);
+        $this->addIndex(Db::INDEX_PK, $name);
 
         return $this;
-    }
-
-    /**
-     * Set the name of the table.
-     *
-     * @param string|null $name The name of the table.
-     * @return TableDef|string Returns $this for fluent calls.
-     */
-    public function table($name = null) {
-        if ($name !== null) {
-            $this->table = $name;
-            return $this;
-        }
-        return $this->table;
     }
 
     /**
@@ -148,7 +138,7 @@ class TableDef implements \JsonSerializable {
      * @param array $columns The columns in the index.
      * @return $this
      */
-    public function index($type, ...$columns) {
+    public function addIndex($type, ...$columns) {
         $type = strtolower($type);
 
         // Look for a current index row.
@@ -174,6 +164,26 @@ class TableDef implements \JsonSerializable {
             $this->indexes[] = $indexDef;
         }
 
+        return $this;
+    }
+
+    /**
+     * Get the table.
+     *
+     * @return string Returns the table.
+     */
+    public function getTable() {
+        return $this->table;
+    }
+
+    /**
+     * Set the name of the table.
+     *
+     * @param string|null $name The name of the table.
+     * @return TableDef|string Returns $this for fluent calls.
+     */
+    public function setTable($name) {
+        $this->table = $name;
         return $this;
     }
 
@@ -205,8 +215,9 @@ class TableDef implements \JsonSerializable {
      * Execute this table definition on a database.
      *
      * @param Db $db The database to query.
+     * @param array $options Additional options. See {@link Db::defineTable()}.
      */
-    public function exec(Db $db) {
-        $db->defineTable($this->toArray());
+    public function exec(Db $db, array $options = []) {
+        $db->defineTable($this->toArray(), $options);
     }
 }

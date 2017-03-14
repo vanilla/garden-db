@@ -176,35 +176,35 @@ class SqliteDb extends MySqlDb {
      * Construct a column definition string from an array defintion.
      *
      * @param string $name The name of the column.
-     * @param array $def The column definition.
+     * @param array $cdef The column definition.
      * @return string Returns a string representing the column definition.
      */
-    protected function columnDefString($name, array $def) {
-        $def += [
+    protected function columnDefString($name, array $cdef) {
+        $cdef += [
             'autoIncrement' => false,
             'primary' => false,
             'allowNull' => false
         ];
 
         // Auto-increments MUST be of type integer.
-        if ($def['autoIncrement']) {
-            $def['dbtype'] = 'integer';
+        if ($cdef['autoIncrement']) {
+            $cdef['dbtype'] = 'integer';
         }
 
-        $result = $this->escape($name).' '.$this->columnTypeString($def['dbtype']);
+        $result = $this->escape($name).' '.$this->nativeDbType($cdef);
 
-        if ($def['primary'] && $def['autoIncrement']) {
+        if ($cdef['primary'] && $cdef['autoIncrement']) {
 //            if (val('autoincrement', $def)) {
                 $result .= ' primary key autoincrement';
-                $def['primary'] = true;
+                $cdef['primary'] = true;
 //            }
         } else {
-            if (!$def['allowNull']) {
+            if (!$cdef['allowNull']) {
                 $result .= ' not null';
             }
 
-            if (isset($def['default'])) {
-                $result .= ' default '.$this->quote($def['default']);
+            if (isset($cdef['default'])) {
+                $result .= ' default '.$this->quote($cdef['default']);
             }
         }
 
@@ -429,19 +429,19 @@ class SqliteDb extends MySqlDb {
     /**
      * {@inheritdoc}
      */
-    public function insert($table, array $rows, array $options = []) {
+    public function insert($table, array $row, array $options = []) {
         // Sqlite doesn't support upsert so do upserts manually.
         if (self::val(Db::OPTION_UPSERT, $options)) {
             unset($options[Db::OPTION_UPSERT]);
 
-            $keys = $this->getPKValue($table, $rows, true);
+            $keys = $this->getPKValue($table, $row, true);
             if (empty($keys)) {
                 throw new \Exception("Cannot upsert with no key.", 500);
             }
             // Try updating first.
             $updated = $this->update(
                 $table,
-                array_diff_key($rows, $keys),
+                array_diff_key($row, $keys),
                 $keys,
                 $options
             );
@@ -455,7 +455,7 @@ class SqliteDb extends MySqlDb {
             }
         }
 
-        $result = parent::insert($table, $rows, $options);
+        $result = parent::insert($table, $row, $options);
         return $result;
     }
 
