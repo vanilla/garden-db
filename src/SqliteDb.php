@@ -16,7 +16,7 @@ class SqliteDb extends MySqlDb {
     /**
      * {@inheritdoc}
      */
-    protected function alterTable(array $alterDef, array $options = []) {
+    protected function alterTableDb(array $alterDef, array $options = []) {
         $tablename = $alterDef['name'];
         $this->alterTableMigrate($tablename, $alterDef, $options);
     }
@@ -51,7 +51,7 @@ class SqliteDb extends MySqlDb {
         $this->renameTable($tablename, $tmpTablename);
 
         // Create the new table.
-        $this->createTable($tableDef, $options);
+        $this->createTableDb($tableDef, $options);
 
         // Figure out the columns that we can insert.
         $columns = array_keys(array_intersect_key($tableDef['columns'], $currentDef['columns']));
@@ -238,7 +238,7 @@ class SqliteDb extends MySqlDb {
     /**
      * {@inheritdoc}
      */
-    protected function createTable(array $tableDef, array $options = []) {
+    protected function createTableDb(array $tableDef, array $options = []) {
         $tablename = $tableDef['name'];
         $parts = [];
 
@@ -327,7 +327,7 @@ class SqliteDb extends MySqlDb {
      * @return array|null Returns an array of columns.
      */
     protected function fetchColumnDefsDb($table) {
-        $cdefs = $this->queryStatement('pragma table_info('.$this->prefixTable($table, false).')')->fetchAll(PDO::FETCH_ASSOC);
+        $cdefs = $this->query('pragma table_info('.$this->prefixTable($table, false).')')->fetchAll(PDO::FETCH_ASSOC);
         if (empty($cdefs)) {
             return null;
         }
@@ -372,10 +372,10 @@ class SqliteDb extends MySqlDb {
      * @param string $table The name of the table to get the indexes for or an empty string to get all indexes.
      * @return array|null
      */
-    protected function getIndexesDb($table = '') {
+    protected function fetchIndexesDb($table = '') {
         $indexes = [];
 
-        $indexInfos = $this->queryStatement('pragma index_list('.$this->prefixTable($table).')')->fetchAll(PDO::FETCH_ASSOC);
+        $indexInfos = $this->query('pragma index_list('.$this->prefixTable($table).')')->fetchAll(PDO::FETCH_ASSOC);
         foreach ($indexInfos as $row) {
             $indexName = $row['name'];
             if ($row['unique']) {
@@ -385,7 +385,7 @@ class SqliteDb extends MySqlDb {
             }
 
             // Query the columns in the index.
-            $columns = $this->queryStatement('pragma index_info('.$this->quote($indexName).')')->fetchAll(PDO::FETCH_ASSOC);
+            $columns = $this->query('pragma index_info('.$this->quote($indexName).')')->fetchAll(PDO::FETCH_ASSOC);
 
             $index = [
                 'name' => $indexName,

@@ -52,7 +52,7 @@ class MySqlDb extends Db {
             return null;
         }
 
-        $indexes = $this->getIndexesDb($table);
+        $indexes = $this->fetchIndexesDb($table);
 
         $tableDef = [
             'name' => $table,
@@ -115,7 +115,7 @@ class MySqlDb extends Db {
      */
     public function get($table, array $where, array $options = []) {
         $sql = $this->buildSelect($table, $where, $options);
-        $result = $this->queryStatement($sql, [], $options);
+        $result = $this->query($sql, [], $options);
         return $result;
     }
 
@@ -416,7 +416,7 @@ class MySqlDb extends Db {
      * @param string $table The name of the table to get the indexes for.
      * @return array|null
      */
-    protected function getIndexesDb($table = '') {
+    protected function fetchIndexesDb($table = '') {
         $stm = $this->get(
             new Identifier('information_schema', 'STATISTICS'),
             [
@@ -643,7 +643,7 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    protected function createTable(array $tableDef, array $options = []) {
+    protected function createTableDb(array $tableDef, array $options = []) {
         $table = $tableDef['name'];
 
         // The table doesn't exist so this is a create table.
@@ -724,7 +724,7 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    protected function alterTable(array $alterDef, array $options = []) {
+    protected function alterTableDb(array $alterDef, array $options = []) {
         $tablename = $alterDef['name'];
         $columnOrders = $this->getColumnOrders($alterDef['def']['columns']);
         $parts = [];

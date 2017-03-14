@@ -164,7 +164,7 @@ abstract class Db {
      * @param array $tableDef The table definition.
      * @param array $options An array of additional options when adding the table.
      */
-    abstract protected function createTable(array $tableDef, array $options = []);
+    abstract protected function createTableDb(array $tableDef, array $options = []);
 
     /**
      * Alter a table in the database.
@@ -175,7 +175,7 @@ abstract class Db {
      * @param array $alterDef The alter definition.
      * @param array $options An array of additional options when adding the table.
      */
-    abstract protected function alterTable(array $alterDef, array $options = []);
+    abstract protected function alterTableDb(array $alterDef, array $options = []);
 
     /**
      * Drop a table.
@@ -436,7 +436,7 @@ abstract class Db {
         $this->fixIndexes($tableName, $tableDef, $curTable);
 
         if (!$curTable) {
-            $this->createTable($tableDef, $options);
+            $this->createTableDb($tableDef, $options);
             $this->tables[$tableKey] = $tableDef;
             $this->tableNames[$tableKey] = $tableDef['name'];
             return;
@@ -491,7 +491,7 @@ abstract class Db {
         $alterDef['def'] = $tableDef;
 
         // Alter the table.
-        $this->alterTable($alterDef, $options);
+        $this->alterTableDb($alterDef, $options);
 
         // Update the cached schema.
         $tableDef['name'] = $tableName;
@@ -737,7 +737,7 @@ abstract class Db {
      * @return \PDOStatement Returns the result of the query.
      * @throws \PDOException Throws an exception if something went wrong during the query.
      */
-    protected function queryStatement($sql, array $params = [], array $options = []) {
+    protected function query($sql, array $params = [], array $options = []) {
         $options += [Db::OPTION_FETCH_MODE => $this->defaultFetchMode];
 
         $stm = $this->getPDO()->prepare($sql);
@@ -765,7 +765,7 @@ abstract class Db {
      * @return int
      */
     protected function queryModify($sql, array $params = [], array $options = []) {
-        $stm = $this->queryStatement($sql, $params, $options);
+        $stm = $this->query($sql, $params, $options);
         return $stm->rowCount();
     }
 
@@ -778,7 +778,7 @@ abstract class Db {
      * @return int Returns the record ID.
      */
     protected function queryID($sql, array $params = [], array $options = []) {
-        $stm = $this->queryStatement($sql, $params, $options);
+        $stm = $this->query($sql, $params, $options);
         $r = $this->getPDO()->lastInsertId();
         return (int)$r;
     }
@@ -790,7 +790,7 @@ abstract class Db {
      * @param array $options Additional options.
      */
     protected function queryDefine($sql, array $options = []) {
-        $stm = $this->queryStatement($sql, [], $options);
+        $stm = $this->query($sql, [], $options);
     }
 
     /**
