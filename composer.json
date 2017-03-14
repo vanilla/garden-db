@@ -9,14 +9,14 @@
 		}
 	],
 	"require": {
-		"php": ">=5.4.0"
+		"php": ">=5.6.0",
+		"vanilla/garden-schema": "^1.2"
 	},
 	"require-dev": {
 		"bobthecow/faker": "dev-master"
 	},
 	"autoload": {
 		"psr-4": {
-			"Garden\\": "garden",
 			"Garden\\Db\\": "src"
 		}
 	},
