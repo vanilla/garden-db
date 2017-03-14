@@ -304,6 +304,16 @@ abstract class Db {
      * @return array|null Returns the type schema array or **null** if a type isn't found.
      */
     public static function typeDef($type) {
+        // Check for the unsigned signifier.
+        $unsigned = null;
+        if ($type[0] === 'u') {
+            $unsigned = true;
+            $type = substr($type, 1);
+        } elseif (preg_match('`(.+)\s+unsigned`i', $type, $m)) {
+            $unsigned = true;
+            $type = $m[1];
+        }
+
         // Remove brackets from the type.
         $brackets = null;
         if (preg_match('`^(.*)\((.*)\)$`', $type, $m)) {
@@ -311,21 +321,15 @@ abstract class Db {
             $type = $m[1];
         }
 
-        // Check for the unsigned signifier.
-        $unsigned = null;
-        if ($type[0] === 'u') {
-            $unsigned = true;
-            $type = substr($type, 1);
-        }
-
         // Look for the type.
         $type = strtolower($type);
         if (isset(self::$types[$type])) {
-            $dbtype = $type;
             $row = self::$types[$type];
+            $dbtype = $type;
 
             // Resolve an alias.
             if (is_string($row)) {
+                $dbtype = $row;
                 $row = self::$types[$row];
             }
         } else {

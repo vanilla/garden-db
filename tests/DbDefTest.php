@@ -47,14 +47,14 @@ abstract class DbDefTest extends AbstractDbTest {
 
         $def->setTable($tbl)
             ->setColumn('col1', 'int', false)
-            ->setColumn('col2', 'int', 0)
+            ->setColumn('col2', 'uint', 0)
             ->addIndex(Db::INDEX_IX, 'col1');
         $def->exec($db);
 
         $expected = $def
             ->setColumn('cola', 'int', false)
-            ->setColumn('colb', 'int', false)
-            ->setColumn('col2', 'int', false)
+            ->setColumn('colb', 'bool', false)
+            ->setColumn('col2', 'uint', false)
             ->toArray();
 
         $db->defineTable($expected);
@@ -98,20 +98,16 @@ abstract class DbDefTest extends AbstractDbTest {
      */
     public function testAlterPrimaryKey() {
         $db = self::$db;
-        $def = new TableDef($db);
         $tbl = 'tstAlterPrimaryKey';
+        $def = new TableDef($tbl);
 
-        $def->setTable($tbl)
-            ->setColumn('col1', 'int')
+        $def->setColumn('col1', 'int')
             ->setColumn('col2', 'int', 0)
-            ->addIndex(Db::INDEX_PK, 'col1');
-        $db->defineTable($def->toArray());
+            ->addIndex(Db::INDEX_PK, 'col1')
+            ->exec($db);
 
-        $def->setTable($tbl)
-            ->setColumn('col1', 'int')
-            ->setColumn('col2', 'int', 0)
-            ->addIndex(Db::INDEX_PK, 'col1', 'col2');
-        $db->defineTable($def->toArray());
+        $def->addIndex(Db::INDEX_PK, 'col1', 'col2')
+            ->exec($db);
 
         $expected = $db->getTableDef($tbl);
 

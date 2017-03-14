@@ -86,6 +86,9 @@ class MySqlDb extends Db {
                 $columnType = 'bool';
             }
             $column = Db::typeDef($columnType);
+            if ($column === null) {
+                throw new \Exception("Unknown type '$columnType'.", 500);
+            }
 
             $column['allowNull'] = strcasecmp($row['IS_NULLABLE'], 'YES') === 0;
 
@@ -800,6 +803,14 @@ class MySqlDb extends Db {
             return filter_var($value, FILTER_VALIDATE_FLOAT);
         } else {
             return (string)$value;
+        }
+    }
+
+    public function quote($value, $column = '') {
+        if (is_bool($value)) {
+            return (string)(int)$value;
+        } else {
+            return parent::quote($value, $column);
         }
     }
 }

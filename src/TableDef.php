@@ -98,10 +98,13 @@ class TableDef implements \JsonSerializable {
             throw new \InvalidArgumentException("Unknown type '$dbtype'.", 500);
         }
 
-        if ($nullDefault === null || $nullDefault == true) {
+        if ($column['dbtype'] === 'bool' && in_array($nullDefault, [true, false], true)) {
+            // Booleans have a special meaning.
+            $column['allowNull'] = false;
+            $column['default'] = $nullDefault;
+        } elseif ($nullDefault === null || $nullDefault === true) {
             $column['allowNull'] = true;
-        }
-        if ($nullDefault === false) {
+        } elseif ($nullDefault === false) {
             $column['allowNull'] = false;
         } else {
             $column['allowNull'] = false;

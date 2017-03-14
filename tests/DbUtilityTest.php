@@ -13,7 +13,7 @@ use Garden\Db\Db;
 /**
  * Test some aspects of the {@link Db} class that don't require a database connection.
  */
-abstract class DbUtilityTest extends AbstractDbTest {
+abstract class DbUtilityTest extends \PHPUnit_Framework_TestCase {
     /**
      * Test {@link Db::getType()}.
      *
@@ -47,7 +47,9 @@ abstract class DbUtilityTest extends AbstractDbTest {
             ['decimal(10, 2)', ['type' => 'number', 'dbtype' => 'decimal', 'precision' => 10, 'scale' => 2]],
             ['numeric(10, 2)', ['type' => 'number', 'dbtype' => 'numeric', 'precision' => 10, 'scale' => 2]],
 
-            ["enum('foo', bar)", ['type' => 'string', 'dbtype' => 'enum', 'enum' => ['foo', 'bar']]]
+            ["enum('foo', bar)", ['type' => 'string', 'dbtype' => 'enum', 'enum' => ['foo', 'bar']]],
+
+            ['boolean', ['type' => 'boolean', 'dbtype' => 'bool']]
         ];
 
         return array_column($r, null, 0);

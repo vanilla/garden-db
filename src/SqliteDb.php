@@ -214,6 +214,30 @@ class SqliteDb extends MySqlDb {
     /**
      * {@inheritdoc}
      */
+    protected function nativeDbType(array $type) {
+        static $translations = ['bool' => 'boolean', 'byte' => 'tinyint', 'short' => 'smallint', 'long' => 'bigint'];
+
+        // Translate the dbtype to a MySQL native type.
+        if (isset($translations[$type['dbtype']])) {
+            $type['dbtype'] = $translations[$type['dbtype']];
+        }
+
+        if (!empty($type['autoIncrement'])) {
+            $type['dbtype'] = 'integer';
+        }
+
+        // Unsigned is represented differently in MySQL.
+        $unsigned = !empty($type['unsigned']) && empty($type['autoIncrement']);
+        unset($type['unsigned']);
+
+        $dbType = static::dbType($type).($unsigned ? ' unsigned' : '');
+
+        return $dbType;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     protected function createTable(array $tableDef, array $options = []) {
         $tablename = $tableDef['name'];
         $parts = [];
@@ -224,7 +248,7 @@ class SqliteDb extends MySqlDb {
             foreach ($pkIndex['columns'] as $column) {
                 $cdef = $tableDef['columns'][$column];
                 $parts[] = $this->columnDefString($column, $cdef);
-                $autoInc |= self::val('autoIncrement', $cdef, false);
+                $autoInc |= !empty($cdef['autoIncrement']);
                 unset($tableDef['columns'][$column]);
             }
         }
@@ -311,10 +335,12 @@ class SqliteDb extends MySqlDb {
         $columns = [];
         $pk = [];
         foreach ($cdefs as $cdef) {
-            $column = [
-                'dbtype' => $this->columnTypeString($cdef['type']),
-                'allowNull' => !filter_var($cdef['notnull'], FILTER_VALIDATE_BOOLEAN)
-            ];
+            $column = Db::typeDef($cdef['type']);
+            $column = Db::typeDef($cdef['type']);
+            if ($column === null) {
+                throw new \Exception("Unknown type '$columnType'.", 500);
+            }
+            $column['allowNull'] = !filter_var($cdef['notnull'], FILTER_VALIDATE_BOOLEAN);
 
             if ($cdef['pk']) {
                 $pk[] = $cdef['name'];
@@ -325,7 +351,7 @@ class SqliteDb extends MySqlDb {
                 }
             }
             if ($cdef['dflt_value'] !== null) {
-                $column['default'] = $this->forceType($cdef['dflt_value'], $column['dbtype']);
+                $column['default'] = $this->forceType($cdef['dflt_value'], $column['type']);
             }
             $columns[$cdef['name']] = $column;
         }
