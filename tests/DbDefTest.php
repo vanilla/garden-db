@@ -22,10 +22,10 @@ abstract class DbDefTest extends AbstractDbTest {
      * Test a basic call to {@link Db::createTable()}.
      */
     public function testCreateTable() {
-        $def = static::createDbDef();
+        $def = new TableDef('user');
         $db = self::$db;
 
-        $def1 = $def->setTable('user')
+        $def1 = $def
             ->setPrimaryKey('userID', 'uint')
             ->setColumn('name', 'varchar(50)')
             ->addIndex(Db::INDEX_IX, 'name')

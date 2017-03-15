@@ -129,10 +129,12 @@ class MySqlDb extends Db {
      * @see Db::get()
      */
     protected function buildSelect($tableName, array $where, array $options = []) {
+        $options += ['limit' => 10];
+
         $sql = '';
 
         // Build the select clause.
-        if (isset($options['columns'])) {
+        if (!empty($options['columns'])) {
             $columns = array();
             foreach ($options['columns'] as $value) {
                 $columns[] = $this->escape($value);
@@ -157,7 +159,7 @@ class MySqlDb extends Db {
         }
 
         // Build the order.
-        if (isset($options['order'])) {
+        if (!empty($options['order'])) {
             foreach ($options['order'] as $column) {
                 if ($column[0] === '-') {
                     $order = $this->escape(substr($column, 1)).' desc';
@@ -170,16 +172,15 @@ class MySqlDb extends Db {
         }
 
         // Build the limit, offset.
-        $limit = 10;
-        if (isset($options['limit'])) {
+        if (!empty($options['limit'])) {
             $limit = (int)$options['limit'];
             $sql .= "\nlimit $limit";
         }
 
-        if (isset($options['offset'])) {
+        if (!empty($options['offset'])) {
             $sql .= ' offset '.((int)$options['offset']);
         } elseif (isset($options['page'])) {
-            $offset = $limit * ($options['page'] - 1);
+            $offset = $options['limit'] * ($options['page'] - 1);
             $sql .= ' offset '.$offset;
         }
 

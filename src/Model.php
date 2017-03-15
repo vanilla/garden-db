@@ -10,7 +10,7 @@ namespace Garden\Db;
 use Garden\Schema\Schema;
 
 class Model {
-    use FetchModeTrait { setFetchMode as private; }
+    use Utils\FetchModeTrait { setFetchMode as private; }
 
     const DEFAULT_LIMIT = 30;
 
@@ -89,7 +89,7 @@ class Model {
      * @param array $primaryKey The names of the columns in the primary key.
      * @return $this
      */
-    public function setPrimaryKey(...$primaryKey) {
+    protected function setPrimaryKey(...$primaryKey) {
         $this->primaryKey = $primaryKey;
         return $this;
     }
@@ -223,14 +223,33 @@ class Model {
      */
     public function get(array $where) {
         $options = [
-            'fetchMode' => $this->getFetchMode(),
+            Db::OPTION_FETCH_MODE => $this->getFetchArgs(),
             'rowCallback' => [$this, 'unserialize']
         ];
 
         $qry = new TableQuery($this->name, $where, $this->db, $options);
-        $qry->setLimit($this->getDefaultLimit());
+        $qry->setLimit($this->getDefaultLimit())
+            ->setOrder(...$this->getDefaultOrder());
 
         return $qry;
+    }
+
+    /**
+     * Query the database directly.
+     *
+     * @param array $where A where clause to filter the data.
+     * @param array $options Options to pass to the database. See {@link Db::get()}.
+     * @return \PDOStatement Returns a statement from the query.
+     */
+    public function query(array $where, array $options = []) {
+        $options += [
+            'order' => $this->getDefaultOrder(),
+            'limit' => $this->getDefaultLimit(),
+            Db::OPTION_FETCH_MODE => $this->getFetchArgs()
+        ];
+
+        $stmt = $this->db->get($this->name, $where, $options);
+        return $stmt;
     }
 
     /**
@@ -239,10 +258,7 @@ class Model {
      */
     public function getID($id) {
         $r = $this->get($this->mapID($id));
-        foreach ($r as $row) {
-            return $row;
-        }
-        return null;
+        return $r->firstRow();
     }
 
     public function insert($row, array $options = []) {

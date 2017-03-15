@@ -13,7 +13,7 @@ use PDO;
  * Defines a standard set of methods that all database drivers must conform to.
  */
 abstract class Db {
-    use FetchModeTrait;
+    use Utils\FetchModeTrait;
 
     const QUERY_DEFINE = 'define';
     const QUERY_READ = 'read';
@@ -135,7 +135,7 @@ abstract class Db {
         $this->px = $px;
 
         $fetchMode = $this->pdo->getAttribute(PDO::ATTR_DEFAULT_FETCH_MODE);
-        $this->setFetchMode($fetchMode === PDO::FETCH_BOTH ? PDO::FETCH_ASSOC: $fetchMode);
+        $this->setFetchMode(in_array($fetchMode, [0, PDO::FETCH_BOTH], true) ? PDO::FETCH_ASSOC: $fetchMode);
     }
 
     /**
@@ -735,7 +735,7 @@ abstract class Db {
      * @throws \PDOException Throws an exception if something went wrong during the query.
      */
     protected function query($sql, array $params = [], array $options = []) {
-        $options += [Db::OPTION_FETCH_MODE => $this->fetchMode];
+        $options += [Db::OPTION_FETCH_MODE => $this->getFetchArgs()];
 
         $stm = $this->getPDO()->prepare($sql);
         $r = $stm->execute($params);
@@ -762,6 +762,7 @@ abstract class Db {
      * @return int
      */
     protected function queryModify($sql, array $params = [], array $options = []) {
+        $options += [Db::OPTION_FETCH_MODE => 0];
         $stm = $this->query($sql, $params, $options);
         return $stm->rowCount();
     }
@@ -775,6 +776,7 @@ abstract class Db {
      * @return int Returns the record ID.
      */
     protected function queryID($sql, array $params = [], array $options = []) {
+        $options += [Db::OPTION_FETCH_MODE => 0];
         $stm = $this->query($sql, $params, $options);
         $r = $this->getPDO()->lastInsertId();
         return (int)$r;
@@ -787,6 +789,7 @@ abstract class Db {
      * @param array $options Additional options.
      */
     protected function queryDefine($sql, array $options = []) {
+        $options += [Db::OPTION_FETCH_MODE => 0];
         $stm = $this->query($sql, [], $options);
     }
 
