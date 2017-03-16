@@ -178,6 +178,10 @@ class Model {
      */
     protected function fetchSchema() {
         $columns = $this->getDb()->fetchColumnDefs($this->name);
+        if ($columns === null) {
+            throw new \InvalidArgumentException("Cannot fetch schema foor {$this->name}.");
+        }
+
         $schema = [
             'type' => 'object',
             'dbtype' => 'table',
@@ -353,7 +357,7 @@ class Model {
     /**
      * Set the defaultOrder.
      *
-     * @param array $columns
+     * @param string[] $columns
      * @return $this
      */
     public function setDefaultOrder(...$columns) {

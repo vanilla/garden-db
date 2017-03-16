@@ -122,7 +122,7 @@ class MySqlDb extends Db {
     /**
      * Build a sql select statement.
      *
-     * @param string|Literal $tableName The name of the main table.
+     * @param string|Identifier $tableName The name of the main table.
      * @param array $where The where filter.
      * @param array $options An array of additional query options.
      * @return string Returns the select statement as a string.
@@ -160,6 +160,7 @@ class MySqlDb extends Db {
 
         // Build the order.
         if (!empty($options['order'])) {
+            $orders = [];
             foreach ($options['order'] as $column) {
                 if ($column[0] === '-') {
                     $order = $this->escape(substr($column, 1)).' desc';
@@ -490,7 +491,7 @@ class MySqlDb extends Db {
     /**
      * Build an insert statement.
      *
-     * @param string|Literal $tableName The name of the table to insert to.
+     * @param string|Identifier $tableName The name of the table to insert to.
      * @param array $row The row to insert.
      * @param array $options An array of options for the insert. See {@link Db::insert} for the options.
      * @return string Returns the the sql string of the insert statement.
@@ -595,7 +596,7 @@ class MySqlDb extends Db {
     /**
      * Build a sql update statement.
      *
-     * @param string|Literal $tableName The name of the table to update.
+     * @param string|Identifier $tableName The name of the table to update.
      * @param array $set An array of columns to set.
      * @param array $where The where filter.
      * @param array $options Additional options for the query.
@@ -655,7 +656,7 @@ class MySqlDb extends Db {
 
         foreach (self::val('indexes', $tableDef, []) as $index) {
             $indexDef = $this->indexDefString($table, $index);
-            if ($indexDef) {
+            if (!empty($indexDef)) {
                 $parts[] = $indexDef;
             }
         }

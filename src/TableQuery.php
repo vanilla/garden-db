@@ -22,7 +22,7 @@ class TableQuery implements \IteratorAggregate, DatasetInterface {
     private $db;
 
     /**
-     * @var array
+     * @var array|null
      */
     private $data;
 

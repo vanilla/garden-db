@@ -316,7 +316,7 @@ class Query {
     /**
      * Set the order.
      *
-     * @param array $columns An array of column name, optionally starting with a "-".
+     * @param string[] $columns An array of column name, optionally starting with a "-".
      * @return $this
      */
     public function setOrder(...$columns) {
@@ -327,7 +327,7 @@ class Query {
     /**
      * Add one or more columns to the the order array.
      *
-     * @param array $columns Column names optionally starting with a "-".
+     * @param string[] $columns Column names optionally starting with a "-".
      * @return $this
      */
     public function addOrder(...$columns) {

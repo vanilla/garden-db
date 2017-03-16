@@ -115,7 +115,7 @@ abstract class Db {
     private $tables = [];
 
     /**
-     * @var array A cached copy of the table names indexed by lowercase name.
+     * @var array|null A cached copy of the table names indexed by lowercase name.
      */
     private $tableNames = null;
 

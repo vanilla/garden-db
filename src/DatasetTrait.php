@@ -10,10 +10,19 @@ namespace Garden\Db;
 use PDO;
 
 trait DatasetTrait {
+    /**
+     * @var int
+     */
     private $offset = 0;
 
+    /**
+     * @var int
+     */
     private $limit = 0;
 
+    /**
+     * @var string[]
+     */
     private $order;
 
     /**
@@ -71,12 +80,12 @@ trait DatasetTrait {
             case PDO::FETCH_OBJ:
                 $result = array_map(function ($row) {
                     return (object)$row;
-                }, $this->getData($row));
+                }, $this->getData());
                 break;
             case PDO::FETCH_ASSOC:
                 $result = array_map(function ($row) {
                     return (array)$row;
-                }, $this->getData($row));
+                }, $this->getData());
                 break;
             default:
                 // Don't know what to do, return null.
@@ -196,7 +205,7 @@ trait DatasetTrait {
             throw new \InvalidArgumentException("Invalid offset '$offset.'", 500);
         }
         
-        $this->offset = $offset;
+        $this->offset = (int)$offset;
         return $this;
     }
 
@@ -220,7 +229,7 @@ trait DatasetTrait {
             throw new \InvalidArgumentException("Invalid limit '$limit.'", 500);
         }
 
-        $this->limit = $limit;
+        $this->limit = (int)$limit;
         return $this;
     }
 
