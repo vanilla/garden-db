@@ -5,8 +5,11 @@
  * @license MIT
  */
 
-namespace Garden\Db;
+namespace Garden\Db\Drivers;
 
+use Garden\Db\Db;
+use Garden\Db\Identifier;
+use Garden\Db\Literal;
 use PDO;
 
 /**

@@ -8,7 +8,7 @@
 namespace Garden\Db\Tests\Sqlite;
 
 use Garden\Db\Db;
-use Garden\Db\SqliteDb;
+use Garden\Db\Drivers\SqliteDb;
 use PDO;
 
 trait SqliteTestTrait {

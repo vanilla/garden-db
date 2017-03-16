@@ -8,7 +8,7 @@
 namespace Garden\Db\Tests\MySql;
 
 use Garden\Db\Db;
-use Garden\Db\MySqlDb;
+use Garden\Db\Drivers\MySqlDb;
 use PDO;
 
 trait MySqlTestTrait {
