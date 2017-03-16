@@ -24,8 +24,12 @@ trait DatasetTrait {
     abstract public function getData();
 
     public function getPage() {
-        $result = intdiv($this->getOffset(), (int)$this->getLimit()) + 1;
-        return $result;
+        if ($this->getLimit() === 0) {
+            return 1;
+        }
+        $result = floor($this->getOffset() / (int)$this->getLimit()) + 1;
+//        $result = intdiv($this->getOffset(), (int)$this->getLimit()) + 1;
+        return (int)$result;
     }
 
     public function setPage($page) {

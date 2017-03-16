@@ -48,7 +48,9 @@ abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
      *
      * @return Db Returns the db object.
      */
-    abstract protected static function createDb();
+    protected static function createDb() {
+        return null;
+    }
 
     protected static function createTestTable($rows = 12) {
         $db = static::$db;

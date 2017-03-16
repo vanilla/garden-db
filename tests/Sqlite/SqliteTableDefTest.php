@@ -7,11 +7,11 @@
 
 namespace Garden\Db\Tests\Sqlite;
 
-use Garden\Db\Tests\DbDefTest;
+use Garden\Db\Tests\TableDefTest;
 
 /**
  * Run the {@link DbDefTest} against {@link SqliteDb}.
  */
-class SqliteDbDefTest extends DbDefTest {
+class SqliteTableDefTest extends TableDefTest {
     use SqliteTestTrait;
 }

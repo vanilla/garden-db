@@ -13,7 +13,7 @@ use Garden\Db\TableDef;
 /**
  * Test various aspects of the {@link TableDef} class and the {@link Db} class as it relates to it.
  */
-abstract class DbDefTest extends AbstractDbTest {
+abstract class TableDefTest extends AbstractDbTest {
     protected static function getPx() {
         return 'dbdef_';
     }
