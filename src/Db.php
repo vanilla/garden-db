@@ -626,7 +626,6 @@ abstract class Db {
      * @return array|object|null Returns the row or false if there is no row.
      */
     final public function getOne($table, array $where, array $options = []) {
-        $options['limit'] = 1;
         $rows = $this->get($table, $where, $options);
         $row = $rows->fetch();
 
