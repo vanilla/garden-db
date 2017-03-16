@@ -13,7 +13,12 @@ use PDO;
 
 trait MySqlTestTrait {
     protected static function getPx() {
-        return '';
+        $px = 'db_';
+        if (preg_match('`MySql(?:Db)?([a-z]+?)Test$`i', get_called_class(), $m)) {
+            $px = (strtolower($m[1]) ?: 'db').'_';
+        }
+
+        return $px;
     }
 
     /**

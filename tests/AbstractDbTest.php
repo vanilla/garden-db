@@ -21,26 +21,6 @@ abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
      */
     protected static $db;
 
-    /// Methods ///
-
-    /**
-     * Get the database connection for the test.
-     *
-     * @return Db Returns the db object.
-     */
-    protected static function createDb() {
-        return null;
-    }
-
-    /**
-     * Get the database def.
-     *
-     * @return TableDef Returns the db def.
-     */
-    protected static function createDbDef() {
-        return new TableDef(self::$db);
-    }
-
     /**
      * Set up the db link for the test cases.
      */
@@ -51,6 +31,53 @@ abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
         array_map([$db, 'dropTable'], $tables);
 
         self::$db = $db;
+        static::createTestTable(24);
+    }
+
+    protected static function getPx() {
+        $px = 'db_';
+        if (preg_match('`Db(.+)Test$`i', get_called_class(), $m)) {
+            $px = (strtolower($m[1]) ?: 'db').'_';
+        }
+
+        return $px;
+    }
+
+    /**
+     * Get the database connection for the test.
+     *
+     * @return Db Returns the db object.
+     */
+    protected static function createDb() {
+        return null;
+    }
+
+    protected static function createTestTable($rows = 12) {
+        $db = static::$db;
+        $def = new TableDef('test');
+
+        $def->setPrimaryKey('id', 'uint')
+            ->setColumn('name', 'varchar(50)')
+            ->setColumn('gid', 'int', 0)
+            ->setColumn('num', 'int', 0)
+            ->exec($db);
+
+        $fn = function () use ($rows) {
+            for ($i = 0; $i < $rows; $i++) {
+                yield ['name' => Name::name(), 'gid' => $i % 3, 'num' => $i % 4];
+            }
+        };
+
+        $db->load('test', $fn());
+    }
+
+    /**
+     * Get the database def.
+     *
+     * @return TableDef Returns the db def.
+     */
+    protected static function createTableDef() {
+        return new TableDef(self::$db);
     }
 
     /**
@@ -101,7 +128,7 @@ abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
      * @param \Traversable $dataset The dataset to check.
      * @param array $order An array of column names, optionally starting with "-".
      */
-    public function assertOrder($dataset, $order) {
+    public function assertOrder($dataset, ...$order) {
         $cmp = function ($a, $b) use ($order) {
             foreach ($order as $column) {
                 $desc = 1;
@@ -124,7 +151,7 @@ abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
         $actual = $array;
         usort($array, $cmp);
 
-        $this->assertSame($array, $actual);
+        $this->assertEquals($array, $actual);
     }
 
     /**
@@ -146,6 +173,8 @@ abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
      * @return array
      */
     public function provideUser($fullName = '') {
+        static $num = 0;
+
         if (empty($fullName)) {
             $fullName = Name::name();
         }
@@ -154,7 +183,8 @@ abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
             'name' => Internet::userName($fullName),
             'email' => Internet::email($fullName),
             'fullName' => $fullName,
-            'insertTime' => time()
+            'insertTime' => time(),
+            'num' => ($num++) % 3
         ];
 
         return $user;
@@ -173,6 +203,7 @@ abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
             ->setColumn('email', 'varchar(255)')
             ->setColumn('fullName', 'varchar(50)')
             ->setColumn('insertTime', 'int')
+            ->setColumn('num', 'int', 0)
             ->addIndex(Db::INDEX_IX, 'name');
 
         return $def;
@@ -187,6 +218,6 @@ abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
     protected function createPopulatedUserTable($name, $count = 10) {
         $this->getUserTableDef($name)->exec(self::$db);
 
-        self::$db->load($name, $this->provideUsers(10));
+        self::$db->load($name, $this->provideUsers($count));
     }
 }

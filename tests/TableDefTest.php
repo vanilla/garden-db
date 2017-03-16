@@ -13,7 +13,7 @@ use Garden\Db\TableDef;
 /**
  * Test various aspects of the {@link TableDef} class and the {@link Db} class as it relates to it.
  */
-abstract class DbDefTest extends AbstractDbTest {
+abstract class TableDefTest extends AbstractDbTest {
     protected static function getPx() {
         return 'dbdef_';
     }
@@ -22,10 +22,10 @@ abstract class DbDefTest extends AbstractDbTest {
      * Test a basic call to {@link Db::createTable()}.
      */
     public function testCreateTable() {
-        $def = static::createDbDef();
+        $def = new TableDef('user');
         $db = self::$db;
 
-        $def1 = $def->setTable('user')
+        $def1 = $def
             ->setPrimaryKey('userID', 'uint')
             ->setColumn('name', 'varchar(50)')
             ->addIndex(Db::INDEX_IX, 'name')

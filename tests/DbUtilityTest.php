@@ -13,7 +13,7 @@ use Garden\Db\Db;
 /**
  * Test some aspects of the {@link Db} class that don't require a database connection.
  */
-abstract class DbUtilityTest extends \PHPUnit_Framework_TestCase {
+class DbUtilityTest extends \PHPUnit_Framework_TestCase {
     /**
      * Test {@link Db::getType()}.
      *

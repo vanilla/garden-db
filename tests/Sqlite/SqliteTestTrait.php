@@ -12,7 +12,14 @@ use Garden\Db\SqliteDb;
 use PDO;
 
 trait SqliteTestTrait {
-    protected abstract static function getPx();
+    protected static function getPx() {
+        $px = 'db_';
+        if (preg_match('`Sqlite(?:Db)?([a-z]+?)Test$`i', get_called_class(), $m)) {
+            $px = (strtolower($m[1]) ?: 'db').'_';
+        }
+
+        return $px;
+    }
 
     /**
      * Get the database connection for the test.

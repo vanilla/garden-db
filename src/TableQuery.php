@@ -10,7 +10,12 @@ namespace Garden\Db;
 use PDO;
 use Traversable;
 
-class TableQuery implements DatasetInterface, \IteratorAggregate {
+class TableQuery implements \IteratorAggregate, DatasetInterface {
+    use Utils\FetchModeTrait, DatasetTrait {
+        fetchAll as protected fetchAllTrait;
+        setFetchMode as protected;
+    }
+
     /**
      * @var Db
      */
@@ -37,25 +42,46 @@ class TableQuery implements DatasetInterface, \IteratorAggregate {
     private $options;
 
     /**
-     * @var callable
+     * @var callable A callback used to unserialize rows from the database.
      */
-    private $calculator;
+    private $rowCallback;
 
-    public function __construct($table, $where, Db $db) {
+    /**
+     * Construct a new {@link TableQuery} object.
+     *
+     * Note that this class is not meant to be modified after being constructed so it's important to pass everything you
+     * need early.
+     *
+     * @param string $table The name of the table to query.
+     * @param array $where The filter information for the query.
+     * @param Db $db The database to fetch the data from. This can be changed later.
+     * @param array $options Additional options for the object:
+     *
+     * fetchMode
+     * : The PDO fetch mode. This can be one of the **PDO::FETCH_** constants, a class name or an array of arguments for
+     * {@link PDOStatement::fetchAll()}
+     * rowCallback
+     * : A callable that will be applied to each row of the result set.
+     */
+    public function __construct($table, array $where, Db $db, array $options = []) {
         $this->table = $table;
         $this->where = $where;
         $this->db = $db;
-    }
 
-    /**
-     * Retrieve an external iterator
-     * @link http://php.net/manual/en/iteratoraggregate.getiterator.php
-     * @return Traversable An instance of an object implementing <b>Iterator</b> or
-     * <b>Traversable</b>
-     * @since 5.0.0
-     */
-    public function getIterator() {
-        return new \ArrayIterator($this->getData());
+        $options += [
+            Db::OPTION_FETCH_MODE => $db->getFetchArgs(),
+            'rowCallback' => null
+        ];
+
+        $fetchMode = (array)$options[Db::OPTION_FETCH_MODE];
+        if (in_array($fetchMode[0], [PDO::FETCH_OBJ | PDO::FETCH_NUM | PDO::FETCH_FUNC])) {
+            throw new \InvalidArgumentException("Fetch mode not supported.", 500);
+        } elseif ($fetchMode[0] == PDO::FETCH_CLASS && !is_a($fetchMode[1], \ArrayAccess::class, true)) {
+            throw new \InvalidArgumentException("The {$fetchMode[1]} class must implement ArrayAccess.", 500);
+        }
+
+        $this->setFetchMode(...$fetchMode);
+        $this->rowCallback = $options['rowCallback'];
     }
 
     /**
@@ -74,7 +100,7 @@ class TableQuery implements DatasetInterface, \IteratorAggregate {
      * @return $this
      */
     public function setOrder(...$columns) {
-        $this->options['order'] = (array)$columns;
+        $this->setOption('order', $columns, true);
         return $this;
     }
 
@@ -94,7 +120,11 @@ class TableQuery implements DatasetInterface, \IteratorAggregate {
      * @return $this
      */
     public function setOffset($offset) {
-        $this->options['offset'] = $offset;
+        if (!is_numeric($offset) || $offset < 0) {
+            throw new \InvalidArgumentException("Invalid offset '$offset.'", 500);
+        }
+
+        $this->setOption('offset', (int)$offset, true);
         return $this;
     }
 
@@ -104,40 +134,27 @@ class TableQuery implements DatasetInterface, \IteratorAggregate {
      * @return int Returns the limit.
      */
     public function getLimit() {
-        return $this->getOption('limit', 10);
+        return $this->getOption('limit', Model::DEFAULT_LIMIT);
     }
 
     /**
-     * Set the limit.
-     *
-     * @param int $limit
-     * @return $this
+     * {@inheritdoc}
      */
     public function setLimit($limit) {
-        $this->options['limit'] = $limit;
-        return $this;
-    }
-
-    /**
-     * Get the data.
-     *
-     * @return array Returns the data.
-     */
-    public function getData() {
-        if ($this->data === null) {
-            $this->data = $this->query();
+        if (!is_numeric($limit) || $limit < 0) {
+            throw new \InvalidArgumentException("Invalid limit '$limit.'", 500);
         }
 
-        return $this->data;
-    }
 
-    public function getPage() {
-        $result = intdiv($this->getOffset(), (int)$this->getLimit()) + 1;
-        return $result;
-    }
+        $reset = true;
 
-    public function setPage($page) {
-        $this->setOffset(($page - 1) * $this->getLimit());
+        if (is_array($this->data) && $limit < $this->getLimit()) {
+            $this->data = array_slice($this->data, 0, $limit);
+            $reset = false;
+        }
+
+        $this->setOption('limit', (int)$limit, $reset);
+
         return $this;
     }
 
@@ -146,46 +163,63 @@ class TableQuery implements DatasetInterface, \IteratorAggregate {
     }
 
     /**
-     * Specify data which should be serialized to JSON
-     * @link http://php.net/manual/en/jsonserializable.jsonserialize.php
-     * @return mixed data which can be serialized by <b>json_encode</b>,
-     * which is a value of any type other than a resource.
-     * @since 5.4.0
-     */
-    function jsonSerialize() {
-        return $this->getData();
-    }
-
-    /**
-     * Perform the actual query to fetch the data.
-     * @return mixed
-     */
-    private function query() {
-        $result = $this->db->get($this->table, $this->where, $this->options)->fetchAll(PDO::FETCH_ASSOC);
-        if (isset($this->calculator)) {
-            array_walk($result, $this->calculator);
-        }
-
-        return $result;
-    }
-
-    /**
-     * Get the calculator.
+     * Set a query option.
      *
-     * @return callable Returns the calculator.
-     */
-    public function getCalculator() {
-        return $this->calculator;
-    }
-
-    /**
-     * Set the calculator.
-     *
-     * @param callable|null $calculator
+     * @param string $name The name of the option to set.
+     * @param mixed $value The new value of the option.
+     * @param bool $reset Pass **true** and the data will be queried again if the option value has changed.
      * @return $this
      */
-    public function setCalculator(callable $calculator) {
-        $this->calculator = $calculator;
+    protected function setOption($name, $value, $reset = false) {
+        $changed = !isset($this->options[$name]) || $this->options[$name] !== $value;
+
+        if ($changed && $reset) {
+            $this->data = null;
+        }
+
+        $this->options[$name] = $value;
         return $this;
+    }
+
+    /**
+     * Get the data.
+     *
+     * @return array Returns the data.
+     */
+    protected function getData() {
+        if ($this->data === null) {
+            $stmt = $this->db->get(
+                $this->table,
+                $this->where,
+                $this->options + [Db::OPTION_FETCH_MODE => $this->getFetchArgs()]
+            );
+
+            $data = $stmt->fetchAll(...(array)$this->getFetchArgs());
+
+            if (is_callable($this->rowCallback)) {
+                array_walk($data, function (&$row) {
+                    $row = call_user_func($this->rowCallback, $row);
+                });
+            }
+
+            $this->data = $data;
+        }
+
+        return $this->data;
+    }
+
+    public function fetchAll($mode = 0, ...$args) {
+        $thisMode = $this->getFetchMode();
+        if ($mode === 0 || $mode === $thisMode || $this->data === []) {
+            return $this->getData();
+        }
+
+        $result = $this->fetchAllTrait($mode, ...$args);
+
+        if ($result === null) {
+            // Don't know what to do, fetch from the database again.
+            $result = $this->db->get($this->table, $this->where, $this->options)->fetchAll($mode, ...$args);
+        }
+        return $result;
     }
 }
