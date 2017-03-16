@@ -735,14 +735,18 @@ abstract class Db {
      * @throws \PDOException Throws an exception if something went wrong during the query.
      */
     protected function query($sql, array $params = [], array $options = []) {
-        $options += [Db::OPTION_FETCH_MODE => $this->getFetchArgs()];
+        $options += [
+            Db::OPTION_FETCH_MODE => $this->getFetchArgs()
+        ];
 
         $stm = $this->getPDO()->prepare($sql);
-        $r = $stm->execute($params);
+
 
         if ($options[Db::OPTION_FETCH_MODE]) {
             $stm->setFetchMode(...(array)$options[Db::OPTION_FETCH_MODE]);
         }
+
+        $r = $stm->execute($params);
 
         // This is a kludge for those that don't have errors turning into exceptions.
         if ($r === false) {

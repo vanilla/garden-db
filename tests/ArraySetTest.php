@@ -10,6 +10,7 @@ namespace Garden\Db\Tests;
 use Faker\Name;
 use Garden\Db\ArraySet;
 use Garden\Db\TableQuery;
+use Garden\Db\Utils\ArrayObject;
 
 /**
  * Tests for the {@link ArraySet} class.
@@ -46,12 +47,23 @@ abstract class ArraySetTest extends AbstractDbTest {
         $this->assertSame(3, $arr->count());
     }
 
+    /**
+     * Test in-place sorting.
+     */
     public function testSorting() {
         $arr = new ArraySet($this->provideUsers(10));
 
-        $order = ['num', '-email'];
         $arr->setOrder('num', '-email');
+        $this->assertOrder($arr, ...$arr->getOrder());
+    }
 
-        $this->assertOrder($arr, ...$order);
+    public function testResorting() {
+        $arr = new ArraySet([]);
+
+        $arr->setOrder('num', '-email');
+        $arr->setData($this->provideUsers(10));
+        $this->assertOrder($arr, ...$arr->getOrder());
+        $arr->setOrder('name');
+        $this->assertOrder($arr, ...$arr->getOrder());
     }
 }
