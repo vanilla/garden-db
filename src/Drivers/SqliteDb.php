@@ -157,13 +157,14 @@ class SqliteDb extends MySqlDb {
      */
     protected function buildUpdate($table, array $set, array $where, array $options = []) {
         $sql = 'update '.
-            (self::val(Db::OPTION_IGNORE, $options) ? 'or ignore ' : '').
+            (empty($options[Db::OPTION_IGNORE]) ? '' : 'or ignore ').
             $this->prefixTable($table).
             "\nset\n  ";
 
         $parts = [];
         foreach ($set as $key => $value) {
-            $parts[] = $this->escape($key).' = '.$this->quote($value);
+            $escapedKey = $this->escape($key);
+            $parts[] = "$escapedKey = ".$this->quote($value, $escapedKey);
         }
         $sql .= implode(",\n  ", $parts);
 
@@ -501,12 +502,14 @@ class SqliteDb extends MySqlDb {
             return $value->getValue($this, $column);
         } elseif (in_array(gettype($value), ['integer', 'double'])) {
             return (string)$value;
+        } elseif ($value instanceof \DateTimeInterface) {
+            $value = $value->format(\DateTime::RFC3339);
         } elseif ($value === true) {
             return '1';
         } elseif ($value === false) {
             return '0';
-        } else {
-            return $this->getPDO()->quote($value);
         }
+
+        return $this->getPDO()->quote($value);
     }
 }

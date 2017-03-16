@@ -25,6 +25,7 @@ class Increment extends Literal {
      */
     public function __construct($inc = 1) {
         parent::__construct('%1$s %2$+d');
+        $this->setInc($inc);
     }
 
     /**
@@ -55,7 +56,7 @@ class Increment extends Literal {
      * @return $this
      */
     public function setInc($inc) {
-        $this->inc = $inc;
+        $this->inc = (int)$inc;
         return $this;
     }
 }

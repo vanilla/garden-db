@@ -60,15 +60,33 @@ abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
             ->setColumn('name', 'varchar(50)')
             ->setColumn('gid', 'int', 0)
             ->setColumn('num', 'int', 0)
+            ->setColumn('eta', 'datetime', null)
             ->exec($db);
 
         $fn = function () use ($rows) {
             for ($i = 0; $i < $rows; $i++) {
-                yield ['name' => Name::name(), 'gid' => $i % 3, 'num' => $i % 4];
+                yield static::provideTestRow();
             }
         };
 
         $db->load('test', $fn());
+    }
+
+    protected static function provideTestRow() {
+        $i = mt_rand();
+
+        $timeZones = ['z', 'America/Montreal', 'America/Vancouver', 'Europe/London', 'Asia/Tokyo'];
+
+        $tz = new \DateTimeZone($timeZones[$i % count($timeZones)]);
+
+        $r = [
+            'name' => Name::name(),
+            'gid' => $i % 3,
+            'num' => $i % 4,
+            'eta' => new \DateTimeImmutable(\Faker\DateTime::dateTime(), $tz)
+        ];
+
+        return $r;
     }
 
     /**

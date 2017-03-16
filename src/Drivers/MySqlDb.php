@@ -566,7 +566,8 @@ class MySqlDb extends Db {
                 $first = false;
             }
 
-            $stmt->execute($row);
+            $args = array_map([$this, 'argValue'], $row);
+            $stmt->execute($args);
             $count += $stmt->rowCount();
         }
 
@@ -613,9 +614,9 @@ class MySqlDb extends Db {
 
         $parts = [];
         foreach ($set as $key => $value) {
-            $quotedKey = $this->escape($key);
+            $escapedKey = $this->escape($key);
 
-            $parts[] = $quotedKey.' = '.$this->quote($value);
+            $parts[] = "$escapedKey = ".$this->quote($value, $escapedKey);
         }
         $sql .= implode(",\n  ", $parts);
 
@@ -814,8 +815,26 @@ class MySqlDb extends Db {
     public function quote($value, $column = '') {
         if (is_bool($value)) {
             return (string)(int)$value;
+        } elseif ($value instanceof \DateTimeInterface) {
+            $value = $value->format(self::MYSQL_DATE_FORMAT);
+        }
+
+        return parent::quote($value, $column);
+    }
+
+    /**
+     * Convert a value into something usable as a PDO parameter.
+     *
+     * @param mixed $value The value to convert.
+     * @return mixed Returns the converted value or the value itself if it's fine.
+     */
+    private function argValue($value) {
+        if (is_bool($value)) {
+            return (int)$value;
+        } elseif ($value instanceof \DateTimeInterface) {
+            return $value->format(self::MYSQL_DATE_FORMAT);
         } else {
-            return parent::quote($value, $column);
+            return $value;
         }
     }
 }
