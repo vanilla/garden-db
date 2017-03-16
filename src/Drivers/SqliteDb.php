@@ -20,19 +20,18 @@ class SqliteDb extends MySqlDb {
      * {@inheritdoc}
      */
     protected function alterTableDb(array $alterDef, array $options = []) {
-        $tablename = $alterDef['name'];
-        $this->alterTableMigrate($tablename, $alterDef, $options);
+        $this->alterTableMigrate($alterDef, $options);
     }
 
     /**
      * Alter a table by creating a new table and copying the old table's data to it.
      *
-     * @param string $tablename The table to alter.
      * @param array $alterDef The new definition.
      * @param array $options An array of options for the migration.
      */
-    private function alterTableMigrate($tablename, array $alterDef, array $options = []) {
-        $currentDef = $this->fetchTableDef($tablename);
+    private function alterTableMigrate(array $alterDef, array $options = []) {
+        $table = $alterDef['name'];
+        $currentDef = $this->fetchTableDef($table);
 
         // Merge the table definitions if we aren't dropping stuff.
         if (!self::val(Db::OPTION_DROP, $options)) {
@@ -48,10 +47,10 @@ class SqliteDb extends MySqlDb {
             }
         }
 
-        $tmpTablename = $tablename.'_'.time();
+        $tmpTable = $table.'_'.time();
 
         // Rename the current table.
-        $this->renameTable($tablename, $tmpTablename);
+        $this->renameTable($table, $tmpTable);
 
         // Create the new table.
         $this->createTableDb($tableDef, $options);
@@ -60,27 +59,27 @@ class SqliteDb extends MySqlDb {
         $columns = array_keys(array_intersect_key($tableDef['columns'], $currentDef['columns']));
 
         // Build the insert/select statement.
-        $sql = 'insert into '.$this->prefixTable($tablename)."\n".
+        $sql = 'insert into '.$this->prefixTable($table)."\n".
             $this->bracketList($columns, '`')."\n".
-            $this->buildSelect($tmpTablename, [], ['columns' => $columns]);
+            $this->buildSelect($tmpTable, [], ['columns' => $columns]);
 
         $this->queryDefine($sql);
 
         // Drop the temp table.
-        $this->dropTable($tmpTablename);
+        $this->dropTable($tmpTable);
     }
 
     /**
      * Rename a table.
      *
-     * @param string $oldname The old name of the table.
-     * @param string $newname The new name of the table.
+     * @param string $old The old name of the table.
+     * @param string $new The new name of the table.
      */
-    private function renameTable($oldname, $newname) {
+    private function renameTable($old, $new) {
         $renameSql = 'alter table '.
-            $this->prefixTable($oldname).
+            $this->prefixTable($old).
             ' rename to '.
-            $this->prefixTable($newname);
+            $this->prefixTable($new);
         $this->queryDefine($renameSql);
     }
 
@@ -115,18 +114,18 @@ class SqliteDb extends MySqlDb {
     /**
      * Drop an index.
      *
-     * @param string $indexName The name of the index to drop.
+     * @param string $index The name of the index to drop.
      */
-    protected function dropIndex($indexName) {
+    protected function dropIndex($index) {
         $sql = 'drop index if exists '.
-            $this->escape($indexName);
+            $this->escape($index);
         $this->queryDefine($sql);
     }
 
     /**
      * {@inheritdoc}
      */
-    protected function buildInsert($tableName, array $row, $options = []) {
+    protected function buildInsert($table, array $row, $options = []) {
         if (self::val(Db::OPTION_UPSERT, $options)) {
             throw new \Exception("Upsert is not supported.");
         } elseif (self::val(Db::OPTION_IGNORE, $options)) {
@@ -136,7 +135,7 @@ class SqliteDb extends MySqlDb {
         } else {
             $sql = 'insert into ';
         }
-        $sql .= $this->prefixTable($tableName);
+        $sql .= $this->prefixTable($table);
 
         // Add the list of values.
         $sql .=
@@ -156,10 +155,10 @@ class SqliteDb extends MySqlDb {
     /**
      * {@inheritdoc}
      */
-    protected function buildUpdate($tableName, array $set, array $where, array $options = []) {
+    protected function buildUpdate($table, array $set, array $where, array $options = []) {
         $sql = 'update '.
             (self::val(Db::OPTION_IGNORE, $options) ? 'or ignore ' : '').
-            $this->prefixTable($tableName).
+            $this->prefixTable($table).
             "\nset\n  ";
 
         $parts = [];
@@ -242,7 +241,7 @@ class SqliteDb extends MySqlDb {
      * {@inheritdoc}
      */
     protected function createTableDb(array $tableDef, array $options = []) {
-        $tablename = $tableDef['name'];
+        $table = $tableDef['name'];
         $parts = [];
 
         // Make sure the primary key columns are defined first and in order.
@@ -265,8 +264,8 @@ class SqliteDb extends MySqlDb {
             $parts[] = 'primary key '.$this->bracketList($pkIndex['columns'], '`');
         }
 
-        $fullTablename = $this->prefixTable($tablename);
-        $sql = "create table $fullTablename (\n  ".
+        $fullTableName = $this->prefixTable($table);
+        $sql = "create table $fullTableName (\n  ".
             implode(",\n  ", $parts).
             "\n)";
 
@@ -275,7 +274,7 @@ class SqliteDb extends MySqlDb {
         // Add the rest of the indexes.
         foreach (self::val('indexes', $tableDef, []) as $index) {
             if (self::val('type', $index, Db::INDEX_IX) !== Db::INDEX_PK) {
-                $this->createIndex($tablename, $index, $options);
+                $this->createIndex($table, $index, $options);
             }
         }
     }
@@ -283,18 +282,18 @@ class SqliteDb extends MySqlDb {
     /**
      * Create an index.
      *
-     * @param string $tablename The name of the table to create the index on.
+     * @param string $table The name of the table to create the index on.
      * @param array $indexDef The index definition.
      * @param array $options Additional options for the index creation.
      */
-    public function createIndex($tablename, array $indexDef, $options = []) {
+    public function createIndex($table, array $indexDef, $options = []) {
         $sql = 'create '.
             (self::val('type', $indexDef) === Db::INDEX_UNIQUE ? 'unique ' : '').
             'index '.
             (self::val(Db::OPTION_IGNORE, $options) ? 'if not exists ' : '').
-            $this->buildIndexName($tablename, $indexDef).
+            $this->buildIndexName($table, $indexDef).
             ' on '.
-            $this->prefixTable($tablename).
+            $this->prefixTable($table).
             $this->bracketList($indexDef['columns'], '`');
 
         $this->queryDefine($sql);
@@ -404,17 +403,17 @@ class SqliteDb extends MySqlDb {
     /**
      * Get the primary or secondary keys from the given rows.
      *
-     * @param string $tablename The name of the table.
+     * @param string $table The name of the table.
      * @param array $row The row to examine.
      * @param bool $quick Whether or not to quickly look for <tablename>ID for the primary key.
      * @return array|null Returns the primary keys and values from {@link $rows} or null if the primary key isn't found.
      */
-    private function getPKValue($tablename, array $row, $quick = false) {
-        if ($quick && isset($row[$tablename.'ID'])) {
-            return [$tablename.'ID' => $row[$tablename.'ID']];
+    private function getPKValue($table, array $row, $quick = false) {
+        if ($quick && isset($row[$table.'ID'])) {
+            return [$table.'ID' => $row[$table.'ID']];
         }
 
-        $tdef = $this->fetchTableDef($tablename);
+        $tdef = $this->fetchTableDef($table);
         $cols = [];
         foreach ($tdef['columns'] as $name => $cdef) {
             if (empty($cdef['primary'])) {

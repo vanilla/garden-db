@@ -125,13 +125,13 @@ class MySqlDb extends Db {
     /**
      * Build a sql select statement.
      *
-     * @param string|Identifier $tableName The name of the main table.
+     * @param string|Identifier $table The name of the main table.
      * @param array $where The where filter.
      * @param array $options An array of additional query options.
      * @return string Returns the select statement as a string.
      * @see Db::get()
      */
-    protected function buildSelect($tableName, array $where, array $options = []) {
+    protected function buildSelect($table, array $where, array $options = []) {
         $options += ['limit' => 0];
 
         $sql = '';
@@ -148,12 +148,12 @@ class MySqlDb extends Db {
         }
 
         // Build the from clause.
-        if ($tableName instanceof Literal) {
-            $tableName = $tableName->getValue($this);
+        if ($table instanceof Literal) {
+            $table = $table->getValue($this);
         } else {
-            $tableName = $this->prefixTable($tableName);
+            $table = $this->prefixTable($table);
         }
-        $sql .= "\nfrom $tableName";
+        $sql .= "\nfrom $table";
 
         // Build the where clause.
         $whereString = $this->buildWhere($where, Db::OP_AND);
@@ -494,14 +494,14 @@ class MySqlDb extends Db {
     /**
      * Build an insert statement.
      *
-     * @param string|Identifier $tableName The name of the table to insert to.
+     * @param string|Identifier $table The name of the table to insert to.
      * @param array $row The row to insert.
      * @param array $options An array of options for the insert. See {@link Db::insert} for the options.
      * @return string Returns the the sql string of the insert statement.
      */
-    protected function buildInsert($tableName, array $row, $options = []) {
+    protected function buildInsert($table, array $row, $options = []) {
         if (self::val(Db::OPTION_UPSERT, $options)) {
-            return $this->buildUpsert($tableName, $row, $options);
+            return $this->buildUpsert($table, $row, $options);
         } elseif (self::val(Db::OPTION_IGNORE, $options)) {
             $sql = 'insert ignore ';
         } elseif (self::val(Db::OPTION_REPLACE, $options)) {
@@ -509,7 +509,7 @@ class MySqlDb extends Db {
         } else {
             $sql = 'insert ';
         }
-        $sql .= $this->prefixTable($tableName);
+        $sql .= $this->prefixTable($table);
 
         // Add the list of values.
         $sql .=
@@ -524,15 +524,15 @@ class MySqlDb extends Db {
      *
      * An upsert statement is an insert on duplicate key statement in MySQL.
      *
-     * @param string $tableName The name of the table to update.
+     * @param string $table The name of the table to update.
      * @param array $row The row to insert or update.
      * @param array $options An array of additional query options.
      * @return string Returns the upsert statement as a string.
      */
-    protected function buildUpsert($tableName, array $row, $options = []) {
+    protected function buildUpsert($table, array $row, $options = []) {
         // Build the initial insert statement first.
         unset($options[Db::OPTION_UPSERT]);
-        $sql = $this->buildInsert($tableName, $row, $options);
+        $sql = $this->buildInsert($table, $row, $options);
 
         // Add the duplicate key stuff.
         $updates = [];
@@ -599,16 +599,16 @@ class MySqlDb extends Db {
     /**
      * Build a sql update statement.
      *
-     * @param string|Identifier $tableName The name of the table to update.
+     * @param string|Identifier $table The name of the table to update.
      * @param array $set An array of columns to set.
      * @param array $where The where filter.
      * @param array $options Additional options for the query.
      * @return string Returns the update statement as a string.
      */
-    protected function buildUpdate($tableName, array $set, array $where, array $options = []) {
+    protected function buildUpdate($table, array $set, array $where, array $options = []) {
         $sql = 'update '.
             (self::val(Db::OPTION_IGNORE, $options) ? 'ignore ' : '').
-            $this->prefixTable($tableName).
+            $this->prefixTable($table).
             "\nset\n  ";
 
         $parts = [];
@@ -704,8 +704,8 @@ class MySqlDb extends Db {
     /**
      * Return the SDL string that defines an index.
      *
-     * @param string $tableName The name of the table that the index is on.
-     * @param array $def The index defintion. This definition should have the following keys.
+     * @param string $table The name of the table that the index is on.
+     * @param array $def The index definition. This definition should have the following keys.
      *
      * columns
      * : An array of columns in the index.
@@ -713,8 +713,8 @@ class MySqlDb extends Db {
      * : One of "index", "unique", or "primary".
      * @return null|string Returns the index string or null if the index is not correct.
      */
-    protected function indexDefString($tableName, array $def) {
-        $indexName = $this->escape($this->buildIndexName($tableName, $def));
+    protected function indexDefString($table, array $def) {
+        $indexName = $this->escape($this->buildIndexName($table, $def));
         switch (self::val('type', $def, Db::INDEX_IX)) {
             case Db::INDEX_IX:
                 return "index $indexName ".$this->bracketList($def['columns'], '`');
@@ -730,7 +730,7 @@ class MySqlDb extends Db {
      * {@inheritdoc}
      */
     protected function alterTableDb(array $alterDef, array $options = []) {
-        $tablename = $alterDef['name'];
+        $table = $alterDef['name'];
         $columnOrders = $this->getColumnOrders($alterDef['def']['columns']);
         $parts = [];
 
@@ -741,7 +741,7 @@ class MySqlDb extends Db {
             $parts[] = 'add '.$this->columnDefString($cname, $cdef).$pos;
         }
         foreach ($alterDef['add']['indexes'] as $ixdef) {
-            $parts[] = 'add '.$this->indexDefString($tablename, $ixdef);
+            $parts[] = 'add '.$this->indexDefString($table, $ixdef);
         }
 
         // Alter the columns.
@@ -763,7 +763,7 @@ class MySqlDb extends Db {
 
         $sql = 'alter '.
             (self::val(Db::OPTION_IGNORE, $options) ? 'ignore ' : '').
-            'table '.$this->prefixTable($tablename)."\n  ".
+            'table '.$this->prefixTable($table)."\n  ".
             implode(",\n  ", $parts);
 
         $this->queryDefine($sql, $options);
