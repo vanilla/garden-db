@@ -7,8 +7,8 @@
 
 namespace Garden\Db\Tests\MySql;
 
-use Garden\Db\Tests\ModelTest;
+use Garden\Db\Tests\ArraySetTest;
 
-class MySqlModelTest extends ModelTest {
+class MySqlArraySetTest extends ArraySetTest {
     use MySqlTestTrait;
 }

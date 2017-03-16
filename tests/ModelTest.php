@@ -16,11 +16,6 @@ use PDO;
  * Tests for the {@link Model} class.
  */
 abstract class ModelTest extends AbstractDbTest {
-    public static function setUpBeforeClass() {
-        parent::setUpBeforeClass();
-    }
-
-
     /**
      * A basic model smoke test.
      */
@@ -91,6 +86,9 @@ abstract class ModelTest extends AbstractDbTest {
         $this->assertSame(4, $dataset->count());
     }
 
+    /**
+     * Test paging through data.
+     */
     public function testPaging() {
         $model = $this->createUserModel(__FUNCTION__, 8);
 

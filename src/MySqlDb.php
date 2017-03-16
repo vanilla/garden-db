@@ -129,7 +129,7 @@ class MySqlDb extends Db {
      * @see Db::get()
      */
     protected function buildSelect($tableName, array $where, array $options = []) {
-        $options += ['limit' => 10];
+        $options += ['limit' => 0];
 
         $sql = '';
 

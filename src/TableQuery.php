@@ -11,7 +11,10 @@ use PDO;
 use Traversable;
 
 class TableQuery implements \IteratorAggregate, DatasetInterface {
-    use Utils\FetchModeTrait { setFetchMode as protected; }
+    use Utils\FetchModeTrait, DatasetTrait {
+        fetchAll as protected fetchAllTrait;
+        setFetchMode as protected;
+    }
 
     /**
      * @var Db
@@ -82,15 +85,6 @@ class TableQuery implements \IteratorAggregate, DatasetInterface {
     }
 
     /**
-     * Retrieve an external iterator
-     * @link http://php.net/manual/en/iteratoraggregate.getiterator.php
-     * @return Traversable Returns a generator of all rows.
-     */
-    public function getIterator() {
-        return new \ArrayIterator($this->getData());
-    }
-
-    /**
      * Get the order.
      *
      * @return array Returns the order.
@@ -126,6 +120,10 @@ class TableQuery implements \IteratorAggregate, DatasetInterface {
      * @return $this
      */
     public function setOffset($offset) {
+        if (!is_numeric($offset) || $offset < 0) {
+            throw new \InvalidArgumentException("Invalid offset '$offset.'", 500);
+        }
+
         $this->setOption('offset', (int)$offset, true);
         return $this;
     }
@@ -143,6 +141,11 @@ class TableQuery implements \IteratorAggregate, DatasetInterface {
      * {@inheritdoc}
      */
     public function setLimit($limit) {
+        if (!is_numeric($limit) || $limit < 0) {
+            throw new \InvalidArgumentException("Invalid limit '$limit.'", 500);
+        }
+
+
         $reset = true;
 
         if (is_array($this->data) && $limit < $this->getLimit()) {
@@ -152,16 +155,6 @@ class TableQuery implements \IteratorAggregate, DatasetInterface {
 
         $this->setOption('limit', (int)$limit, $reset);
 
-        return $this;
-    }
-
-    public function getPage() {
-        $result = intdiv($this->getOffset(), (int)$this->getLimit()) + 1;
-        return $result;
-    }
-
-    public function setPage($page) {
-        $this->setOffset(($page - 1) * $this->getLimit());
         return $this;
     }
 
@@ -189,22 +182,11 @@ class TableQuery implements \IteratorAggregate, DatasetInterface {
     }
 
     /**
-     * Specify data which should be serialized to JSON
-     * @link http://php.net/manual/en/jsonserializable.jsonserialize.php
-     * @return mixed data which can be serialized by <b>json_encode</b>,
-     * which is a value of any type other than a resource.
-     * @since 5.4.0
-     */
-    public function jsonSerialize() {
-        return $this->getData();
-    }
-
-    /**
      * Get the data.
      *
      * @return array Returns the data.
      */
-    public function getData() {
+    protected function getData() {
         if ($this->data === null) {
             $stmt = $this->db->get(
                 $this->table,
@@ -232,95 +214,12 @@ class TableQuery implements \IteratorAggregate, DatasetInterface {
             return $this->getData();
         }
 
-        switch ($mode) {
-            case PDO::FETCH_COLUMN:
-                $result = $this->fetchArrayColumn(reset($args) ?: 0);
-                break;
-            case PDO::FETCH_COLUMN | PDO::FETCH_GROUP;
-                $result = $this->fetchArrayColumn(0, reset($args) ?: 0, true);
-                break;
-            case PDO::FETCH_KEY_PAIR:
-                $result = $this->fetchArrayColumn(1, 0);
-                break;
-            default:
-                // Don't know what to do, fetch from the database again.
-                $result = $this->db->get($this->table, $this->where, $this->options)->fetchAll($mode, ...$args);
+        $result = $this->fetchAllTrait($mode, ...$args);
+
+        if ($result === null) {
+            // Don't know what to do, fetch from the database again.
+            $result = $this->db->get($this->table, $this->where, $this->options)->fetchAll($mode, ...$args);
         }
         return $result;
-    }
-
-    /**
-     * Get the first row of data.
-     *
-     * @return mixed|null Returns the first row or **null** if there is no data.
-     */
-    public function firstRow() {
-        $data = $this->getData();
-
-        return empty($data) ? null : $data[0];
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function fetchArrayColumn($columnKey = null, $indexKey = null, $grouped = false) {
-        $arr = $this->getData();
-
-        if (empty($arr)) {
-            return [];
-        }
-
-        $firstRow = reset($arr);
-
-        if (is_int($columnKey) || is_int($indexKey)) {
-            $i = 0;
-            foreach ($firstRow as $name => $value) {
-                if ($i === $columnKey) {
-                    $columnKey = $name;
-                }
-
-                if ($i === $indexKey) {
-                    $indexKey = $name;
-                }
-
-                if (!(is_int($columnKey) || is_int($indexKey))) {
-                    break;
-                }
-                $i++;
-            }
-        }
-
-        if (!$grouped && is_array($firstRow)) {
-            return array_column($arr, $columnKey, $indexKey);
-        } else {
-            $result = [];
-
-            foreach ($arr as $i => $row) {
-                if (is_array($row) || $row instanceof \ArrayAccess ) {
-                    $value = $columnKey === null ? $row : $row[$columnKey];
-                    $index = $indexKey === null ? $i : $row[$indexKey];
-                } else {
-                    $value = $columnKey === null ? $row : $row->$columnKey;
-                    $index = $indexKey === null ? $i : $row->$indexKey;
-                }
-
-                if ($grouped) {
-                    $result[$index][] = $value;
-                } else {
-                    $result[$index] = $value;
-                }
-            }
-
-            return $result;
-        }
-    }
-
-    /**
-     * Get the number of records queried.
-     *
-     * @return int Returns the count.
-     */
-    public function count() {
-        return count($this->getData());
     }
 }
