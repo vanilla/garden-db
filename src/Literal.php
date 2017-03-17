@@ -40,7 +40,7 @@ class Literal {
      * Get the literal value.
      *
      * @param Db $db The database driver getting the value.
-     * @param array ...$args Arguments to pass into the literal. This uses **sprintf()** so arguments must already be escaped.
+     * @param mixed ...$args Arguments to pass into the literal. This uses **sprintf()** so arguments must already be escaped.
      * @return string Returns the value for the specific driver, the default literal, or "null" if there is no default.
      */
     public function getValue(Db $db, ...$args) {

@@ -19,7 +19,7 @@ class Identifier {
 
     /**
      * Identifier constructor.
-     * @param array ...$identifier
+     * @param string ...$identifier
      */
     public function __construct(...$identifier) {
         if (empty($identifier) || empty($identifier[0])) {

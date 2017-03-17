@@ -86,7 +86,7 @@ class Model {
     /**
      * Set the primaryKey.
      *
-     * @param array $primaryKey The names of the columns in the primary key.
+     * @param string ...$primaryKey The names of the columns in the primary key.
      * @return $this
      */
     protected function setPrimaryKey(...$primaryKey) {
@@ -361,7 +361,7 @@ class Model {
      *
      * The default sort order will be passed to all queries, but can be overridden in the {@link DatasetInterface}.
      *
-     * @param string[] $columns The column names to sort by, optionally prefixed with "-" to denote descending order.
+     * @param string ...$columns The column names to sort by, optionally prefixed with "-" to denote descending order.
      * @return $this
      */
     public function setDefaultOrder(...$columns) {

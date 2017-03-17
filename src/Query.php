@@ -316,7 +316,7 @@ class Query {
     /**
      * Set the sort order.
      *
-     * @param string[] $columns The column names to sort by, optionally prefixed with "-" to denote descending order.
+     * @param string ...$columns The column names to sort by, optionally prefixed with "-" to denote descending order.
      * @return $this
      */
     public function setOrder(...$columns) {

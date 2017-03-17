@@ -37,7 +37,7 @@ trait FetchModeTrait {
      * Set the default fetch mode.
      *
      * @param int|string $mode One of the **PDO::FETCH_*** constants or a class name.
-     * @param array $args Additional arguments for {@link \PDOStatement::fetchAll()}.
+     * @param mixed ...$args Additional arguments for {@link \PDOStatement::fetchAll()}.
      * @return $this
      * @see http://php.net/manual/en/pdostatement.fetchall.php
      */

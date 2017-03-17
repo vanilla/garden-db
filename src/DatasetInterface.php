@@ -70,7 +70,7 @@ interface DatasetInterface extends \Traversable, \Countable, \JsonSerializable {
     /**
      * Set the sort order.
      *
-     * @param string[] $columns The column names to sort by, optionally prefixed with "-" to denote descending order.
+     * @param string ...$columns The column names to sort by, optionally prefixed with "-" to denote descending order.
      * @return $this
      */
     public function setOrder(...$columns);
@@ -79,7 +79,7 @@ interface DatasetInterface extends \Traversable, \Countable, \JsonSerializable {
      * Fetch all data in a way similar to {@link PDOStatement::fetchAll()}.
      *
      * @param int $mode
-     * @param array ...$args
+     * @param mixed ...$args
      * @return array
      */
     public function fetchAll($mode = 0, ...$args);

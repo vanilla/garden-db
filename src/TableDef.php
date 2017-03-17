@@ -138,7 +138,7 @@ class TableDef implements \JsonSerializable {
      * Add or update an index.
      *
      * @param string $type One of the `Db::INDEX_*` constants.
-     * @param array $columns The columns in the index.
+     * @param string ...$columns The columns in the index.
      * @return $this
      */
     public function addIndex($type, ...$columns) {
