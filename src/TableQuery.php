@@ -85,18 +85,18 @@ class TableQuery implements \IteratorAggregate, DatasetInterface {
     }
 
     /**
-     * Get the order.
+     * Get the set order.
      *
-     * @return array Returns the order.
+     * @return array Returns column names to order by, optionally beginning with "-" to denote descending.
      */
     public function getOrder() {
         return $this->getOption('order', []);
     }
 
     /**
-     * Set the order.
+     * Set the sort order.
      *
-     * @param string[] $columns The column names to order by.
+     * @param string[] $columns The column names to order by, optionally beginning with "-" to denote descending.
      * @return $this
      */
     public function setOrder(...$columns) {

@@ -63,13 +63,14 @@ interface DatasetInterface extends \Traversable, \Countable, \JsonSerializable {
     /**
      * Get the sort order.
      *
-     * @return string[] Returns an array of column names, optionally prefixed with "-".
+     * @return string[] Returns an array of column names, optionally prefixed with "-" to denote descending order.
      */
     public function getOrder();
+
     /**
      * Set the sort order.
      *
-     * @param string[] $columns The column names to sort by, optionally prefixed with "-".
+     * @param string[] $columns The column names to sort by, optionally prefixed with "-" to denote descending order.
      * @return $this
      */
     public function setOrder(...$columns);
