@@ -75,7 +75,7 @@ abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
     protected static function provideTestRow() {
         $i = mt_rand();
 
-        $timeZones = ['z', 'America/Montreal', 'America/Vancouver', 'Europe/London', 'Asia/Tokyo'];
+        $timeZones = ['UTC', 'America/Montreal', 'America/Vancouver', 'Europe/London', 'Asia/Tokyo'];
 
         $tz = new \DateTimeZone($timeZones[$i % count($timeZones)]);
 
