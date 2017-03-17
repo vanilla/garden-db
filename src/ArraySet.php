@@ -7,23 +7,33 @@
 
 namespace Garden\Db;
 
-
 class ArraySet implements  \IteratorAggregate, DatasetInterface {
-    use DatasetTrait;
+    use Utils\DatasetTrait;
 
+    /**
+     * @var array The internal data array.
+     */
     private $data;
 
+    /**
+     * @var bool Indicates that the data needs to be sorted.
+     */
     private $toSort = false;
 
     /**
      * Construct a new {@link ArraySet} object.
      *
-     * @param array|\Traversable $data The initial data in the
+     * @param array|\Traversable $data The initial data in the array.
+     * @param string[] The default sort order. Supply this to prevent a manual sort.
      */
-    public function __construct($data = []) {
+    public function __construct($data = [], $order = []) {
         $this->setData($data);
+        $this->order = $order;
     }
 
+    /**
+     * Sort the internal array.
+     */
     protected function sortData() {
         $columns = $this->getOrder();
         $order = [];

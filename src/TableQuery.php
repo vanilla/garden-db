@@ -10,8 +10,13 @@ namespace Garden\Db;
 use PDO;
 use Traversable;
 
+/**
+ * Represents a dataset on a delayed query.
+ *
+ * This class is analogous to the {@link PDOStatement} except the query is only executed when the data is first accessed.
+ */
 class TableQuery implements \IteratorAggregate, DatasetInterface {
-    use Utils\FetchModeTrait, DatasetTrait {
+    use Utils\FetchModeTrait, Utils\DatasetTrait {
         fetchAll as protected fetchAllTrait;
         setFetchMode as protected;
     }
@@ -32,7 +37,7 @@ class TableQuery implements \IteratorAggregate, DatasetInterface {
     private $table;
 
     /**
-     * @var
+     * @var array
      */
     private $where;
 
@@ -100,19 +105,14 @@ class TableQuery implements \IteratorAggregate, DatasetInterface {
     }
 
     /**
-     * Get the offset.
-     *
-     * @return int Returns the offset.
+     * {@inheritdoc}
      */
     public function getOffset() {
         return $this->getOption('offset', 0);
     }
 
     /**
-     * Set the offset.
-     *
-     * @param int $offset
-     * @return $this
+     * {@inheritdoc}
      */
     public function setOffset($offset) {
         if (!is_numeric($offset) || $offset < 0) {

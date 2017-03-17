@@ -5,7 +5,7 @@
  * @license MIT
  */
 
-namespace Garden\Db;
+namespace Garden\Db\Utils;
 
 use PDO;
 
