@@ -339,7 +339,6 @@ class SqliteDb extends MySqlDb {
         $pk = [];
         foreach ($cdefs as $cdef) {
             $column = Db::typeDef($cdef['type']);
-            $column = Db::typeDef($cdef['type']);
             if ($column === null) {
                 throw new \Exception("Unknown type '$columnType'.", 500);
             }

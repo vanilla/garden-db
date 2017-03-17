@@ -776,13 +776,14 @@ abstract class Db {
      * @param string $sql The query to execute.
      * @param array $params Input parameters for the query.
      * @param array $options Additional options.
-     * @return int Returns the record ID.
+     * @return mixed Returns the record ID.
      */
     protected function queryID($sql, array $params = [], array $options = []) {
         $options += [Db::OPTION_FETCH_MODE => 0];
-        $stm = $this->query($sql, $params, $options);
+        $this->query($sql, $params, $options);
         $r = $this->getPDO()->lastInsertId();
-        return (int)$r;
+
+        return is_numeric($r) ? (int)$r : $r;
     }
 
     /**
@@ -793,7 +794,7 @@ abstract class Db {
      */
     protected function queryDefine($sql, array $options = []) {
         $options += [Db::OPTION_FETCH_MODE => 0];
-        $stm = $this->query($sql, [], $options);
+        $this->query($sql, [], $options);
     }
 
     /**

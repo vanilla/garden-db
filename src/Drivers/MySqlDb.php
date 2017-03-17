@@ -524,7 +524,7 @@ class MySqlDb extends Db {
      *
      * An upsert statement is an insert on duplicate key statement in MySQL.
      *
-     * @param string $table The name of the table to update.
+     * @param string|Identifier $table The name of the table to update.
      * @param array $row The row to insert or update.
      * @param array $options An array of additional query options.
      * @return string Returns the upsert statement as a string.

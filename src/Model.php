@@ -346,18 +346,22 @@ class Model {
     }
 
     /**
-     * Get the defaultOrder.
+     * Get the default sort order.
      *
-     * @return array Returns the defaultOrder.
+     * The default sort order will be passed to all queries, but can be overridden in the {@link DatasetInterface}.
+     *
+     * @return string[] Returns an array of column names, optionally prefixed with "-" to denote descending order.
      */
     public function getDefaultOrder() {
         return $this->defaultOrder;
     }
 
     /**
-     * Set the defaultOrder.
+     * Set the default sort order.
      *
-     * @param string[] $columns
+     * The default sort order will be passed to all queries, but can be overridden in the {@link DatasetInterface}.
+     *
+     * @param string[] $columns The column names to sort by, optionally prefixed with "-" to denote descending order.
      * @return $this
      */
     public function setDefaultOrder(...$columns) {

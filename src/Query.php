@@ -305,18 +305,18 @@ class Query {
     }
 
     /**
-     * Get the order.
+     * Get the sort order.
      *
-     * @return string[] Returns an array of column name, optionally starting with a "-".
+     * @return string[] Returns an array of column names, optionally prefixed with "-" to denote descending order.
      */
     public function getOrder() {
         return $this->order;
     }
 
     /**
-     * Set the order.
+     * Set the sort order.
      *
-     * @param string[] $columns An array of column name, optionally starting with a "-".
+     * @param string[] $columns The column names to sort by, optionally prefixed with "-" to denote descending order.
      * @return $this
      */
     public function setOrder(...$columns) {
