@@ -9,11 +9,12 @@ namespace Garden\Db\Tests;
 
 use Garden\Db\Db;
 use Garden\Db\Query;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Test the {@link Query} class.
  */
-class QueryTest extends \PHPUnit_Framework_TestCase {
+class QueryTest extends TestCase {
     /**
      * Test a basic bracketed expression.
      */

@@ -11,11 +11,12 @@ use Faker\Internet;
 use Faker\Name;
 use Garden\Db\Db;
 use Garden\Db\TableDef;
+use PHPUnit\Framework\TestCase;
 
 /**
  * The base class for database tests.
  */
-abstract class AbstractDbTest extends \PHPUnit_Framework_TestCase {
+abstract class AbstractDbTest extends TestCase {
     /**
      * @var Db The database connection for the tests.
      */
