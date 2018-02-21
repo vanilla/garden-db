@@ -27,16 +27,16 @@ abstract class IssueTest extends AbstractDbTest {
         $tb2 = new TableDef('b');
         $tb2->setColumn('foo', 'varchar(10)');
 
-        $db1 = static::$db;
-        $tb1->exec($db1);
-        $tb2->exec($db1);
-        $tables = $db1->fetchTableNames();
+        $db = static::$db;
+        $tb1->exec($db);
+        $tb2->exec($db);
+        $tables = $db->fetchTableNames();
 
-        $db2 = static::createDb();
+        $db->reset();
         $tb1->setColumn('bar', 'varchar(10)');
-        $tb1->exec($db2);
+        $tb1->exec($db);
 
-        $b = $db2->fetchTableDef('b');
+        $b = $db->fetchTableDef('b');
         $this->assertNotNull($b);
 
 //        $tb2->exec($db2);
