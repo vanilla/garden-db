@@ -8,12 +8,13 @@
 namespace Garden\Db\Tests;
 
 use Garden\Db\Db;
+use PHPUnit\Framework\TestCase;
 
 
 /**
  * Test some aspects of the {@link Db} class that don't require a database connection.
  */
-class DbUtilityTest extends \PHPUnit_Framework_TestCase {
+class DbUtilityTest extends TestCase {
     /**
      * Test {@link Db::getType()}.
      *
