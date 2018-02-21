@@ -493,6 +493,11 @@ abstract class Db {
         // Update the cached schema.
         $tableDef['name'] = $tableName;
         $this->tables[$tableKey] = $tableDef;
+
+        if ($this->tableNames === null) {
+            $this->fetchTableNames();
+        }
+
         $this->tableNames[$tableKey] = $tableName;
     }
 
