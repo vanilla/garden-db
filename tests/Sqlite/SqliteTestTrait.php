@@ -29,11 +29,11 @@ trait SqliteTestTrait {
     protected static function createDb() {
         $px = static::getPx();
 
-        if (getenv('TRAVIS')) {
-            $path = ':memory:';
-        } else {
+//        if (getenv('TRAVIS')) {
+//            $path = ':memory:';
+//        } else {
             $path = __DIR__."/../cache/{$px}test.sqlite";
-        }
+//        }
         $pdo = new PDO("sqlite:$path", null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         $db = new SqliteDb($pdo);
         $db->setPx($px);
