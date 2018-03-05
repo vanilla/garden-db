@@ -36,7 +36,7 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    protected function dropTableDb($table, array $options = []) {
+    protected function dropTableDb(string $table, array $options = []) {
         $sql = 'drop table '.
             ($options[Db::OPTION_IGNORE] ? 'if exists ' : '').
             $this->prefixTable($table);
@@ -300,9 +300,8 @@ class MySqlDb extends Db {
      * @param string $column The column name.
      * @param mixed $value The right-hand value.
      * @return string Returns the like expression.
-     * @internal param bool $quotevals Whether or not to quote the values.
      */
-    protected function buildLike($column, $value) {
+    protected function buildLike(string $column, $value): string {
         return "$column like ".$this->quote($value);
     }
 
@@ -481,7 +480,7 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    public function insert($table, array $row, array $options = []) {
+    public function insert(string $table, array $row, array $options = []) {
         $sql = $this->buildInsert($table, $row, $options);
         $id = $this->queryID($sql, [], $options);
         if (is_numeric($id)) {
@@ -547,7 +546,7 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    public function load($table, $rows, array $options = []) {
+    public function load(string $table, $rows, array $options = []) {
         $count = 0;
         $first = true;
         $spec = [];
@@ -590,7 +589,7 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    public function update($table, array $set, array $where, array $options = []) {
+    public function update(string $table, array $set, array $where, array $options = []): int {
         $sql = $this->buildUpdate($table, $set, $where, $options);
         $result = $this->queryModify($sql, [], $options);
 
@@ -606,7 +605,7 @@ class MySqlDb extends Db {
      * @param array $options Additional options for the query.
      * @return string Returns the update statement as a string.
      */
-    protected function buildUpdate($table, array $set, array $where, array $options = []) {
+    protected function buildUpdate($table, array $set, array $where, array $options = []): string {
         $sql = 'update '.
             (self::val(Db::OPTION_IGNORE, $options) ? 'ignore ' : '').
             $this->prefixTable($table).
@@ -630,7 +629,7 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    public function delete($table, array $where, array $options = []) {
+    public function delete(string $table, array $where, array $options = []): int {
         if (self::val(Db::OPTION_TRUNCATE, $options)) {
             if (!empty($where)) {
                 throw new \InvalidArgumentException("You cannot truncate $table with a where filter.", 500);
@@ -812,7 +811,7 @@ class MySqlDb extends Db {
         }
     }
 
-    public function quote($value, $column = '') {
+    public function quote($value, string $column = ''): string {
         if (is_bool($value)) {
             return (string)(int)$value;
         } elseif ($value instanceof \DateTimeInterface) {
