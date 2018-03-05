@@ -50,7 +50,8 @@ trait MySqlTestTrait {
             );
         }
 
-        $db = new MySqlDb($pdo);
+        $class = Db::driverClass($pdo);
+        $db = new $class($pdo);
         $db->setPx(static::getPx());
 
 
