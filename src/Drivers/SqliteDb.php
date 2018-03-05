@@ -329,7 +329,7 @@ class SqliteDb extends MySqlDb {
      * @param string $table The table to get the columns for.
      * @return array|null Returns an array of columns.
      */
-    protected function fetchColumnDefsDb($table) {
+    protected function fetchColumnDefsDb(string $table) {
         $cdefs = $this->query('pragma table_info('.$this->prefixTable($table, false).')')->fetchAll(PDO::FETCH_ASSOC);
         if (empty($cdefs)) {
             return null;

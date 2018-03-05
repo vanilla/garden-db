@@ -99,7 +99,7 @@ class TableQuery implements \IteratorAggregate, DatasetInterface {
     /**
      * {@inheritdoc}
      */
-    public function setOrder(...$columns) {
+    public function setOrder(string ...$columns) {
         $this->setOption('order', $columns, true);
         return $this;
     }

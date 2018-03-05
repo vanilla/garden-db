@@ -69,7 +69,7 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    protected function fetchColumnDefsDb($table) {
+    protected function fetchColumnDefsDb(string $table) {
         $rows = $this->get(
             new Identifier('information_schema', 'COLUMNS'),
             [
