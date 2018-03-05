@@ -48,7 +48,7 @@ interface DatasetInterface extends \Traversable, \Countable, \JsonSerializable {
      *
      * @return int Returns the page number.
      */
-    public function getPage();
+    public function getPage(): int;
 
     /**
      * Set the current page.
@@ -58,7 +58,7 @@ interface DatasetInterface extends \Traversable, \Countable, \JsonSerializable {
      * @param int $page The new page number.
      * @return $this
      */
-    public function setPage($page);
+    public function setPage(int $page);
 
     /**
      * Get the sort order.
@@ -73,7 +73,7 @@ interface DatasetInterface extends \Traversable, \Countable, \JsonSerializable {
      * @param string ...$columns The column names to sort by, optionally prefixed with "-" to denote descending order.
      * @return $this
      */
-    public function setOrder(...$columns);
+    public function setOrder(string ...$columns);
 
     /**
      * Fetch all data in a way similar to {@link PDOStatement::fetchAll()}.
@@ -82,7 +82,7 @@ interface DatasetInterface extends \Traversable, \Countable, \JsonSerializable {
      * @param mixed ...$args
      * @return array
      */
-    public function fetchAll($mode = 0, ...$args);
+    public function fetchAll(int $mode = 0, ...$args): array;
 
     /**
      * Fetch the data and perform a quasi-{@link array_column()} operation on it.
@@ -92,7 +92,7 @@ interface DatasetInterface extends \Traversable, \Countable, \JsonSerializable {
      * @param bool $grouped If true the result will be grouped by {@link $indexKey} and each value will be an array of rows.
      * @return array Returns the array of results.
      */
-    public function fetchArrayColumn($columnKey = null, $indexKey = null, $grouped = false);
+    public function fetchArrayColumn($columnKey = null, $indexKey = null, bool $grouped = false): array;
 
     /**
      * Get the first row in the dataset.

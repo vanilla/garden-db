@@ -47,7 +47,7 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    protected function fetchTableDefDb($table) {
+    protected function fetchTableDefDb(string $table) {
         $columns = $this->fetchColumnDefsDb($table);
 
         if (empty($columns)) {

@@ -203,7 +203,7 @@ class TableQuery implements \IteratorAggregate, DatasetInterface {
         return $this->data;
     }
 
-    public function fetchAll($mode = 0, ...$args) {
+    public function fetchAll(int $mode = 0, ...$args): array {
         $thisMode = $this->getFetchMode();
         if ($mode === 0 || $mode === $thisMode || $this->data === []) {
             return $this->getData();
