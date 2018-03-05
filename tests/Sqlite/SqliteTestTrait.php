@@ -35,7 +35,9 @@ trait SqliteTestTrait {
             $path = __DIR__."/../cache/{$px}test.sqlite";
         }
         $pdo = new PDO("sqlite:$path", null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-        $db = new SqliteDb($pdo);
+
+        $class = Db::driverClass($pdo);
+        $db = new $class($pdo);
         $db->setPx($px);
 
         return $db;

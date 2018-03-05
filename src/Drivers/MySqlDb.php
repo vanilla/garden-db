@@ -116,7 +116,7 @@ class MySqlDb extends Db {
     /**
      * {@inheritdoc}
      */
-    public function get($table, array $where, array $options = []) {
+    public function get($table, array $where, array $options = []): \PDOStatement {
         $sql = $this->buildSelect($table, $where, $options);
         $result = $this->query($sql, [], $options);
         return $result;
