@@ -8,6 +8,8 @@
 namespace Garden\Db;
 
 use PDO;
+use Garden\Db\Drivers\MySqlDb;
+use Garden\Db\Drivers\SqliteDb;
 
 /**
  * Defines a standard set of methods that all database drivers must conform to.
