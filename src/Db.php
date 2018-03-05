@@ -132,7 +132,7 @@ abstract class Db {
      * @param PDO $pdo The connection to the database.
      * @param string $px The database prefix.
      */
-    public function __construct(PDO $pdo, $px = '') {
+    public function __construct(PDO $pdo, string $px = '') {
         $this->pdo = $pdo;
         $this->px = $px;
 
@@ -182,7 +182,7 @@ abstract class Db {
      * @param string $table The name of the table to drop.
      * @param array $options An array of additional options when adding the table.
      */
-    final public function dropTable($table, array $options = []) {
+    final public function dropTable(string $table, array $options = []) {
         $options += [Db::OPTION_IGNORE => false];
         $this->dropTableDb($table, $options);
 
@@ -196,7 +196,7 @@ abstract class Db {
      * @param string $table The name of the table to drop.
      * @param array $options An array of additional options when adding the table.
      */
-    abstract protected function dropTableDb($table, array $options = []);
+    abstract protected function dropTableDb(string $table, array $options = []);
 
     /**
      * Get the names of all the tables in the database.
@@ -234,7 +234,7 @@ abstract class Db {
      * @param string $table The name of the table.
      * @return array|null Returns the table definition or null if the table does not exist.
      */
-    final public function fetchTableDef($table) {
+    final public function fetchTableDef(string $table) {
         $tableKey = strtolower($table);
 
         // First check the table cache.
@@ -263,7 +263,7 @@ abstract class Db {
      * @param string $table The name of the table to get.
      * @return array|null Returns the table def or **null** if the table doesn't exist.
      */
-    abstract protected function fetchTableDefDb($table);
+    abstract protected function fetchTableDefDb(string $table);
 
 
     /**
@@ -272,7 +272,7 @@ abstract class Db {
      * @param string $table The name of the table to get the columns for.
      * @return array|null Returns an array of column definitions.
      */
-    final public function fetchColumnDefs($table) {
+    final public function fetchColumnDefs(string $table) {
         $tableKey = strtolower($table);
 
         if (!empty($this->tables[$tableKey]['columns'])) {
@@ -294,7 +294,7 @@ abstract class Db {
      * @param string $table The name of the table to fetch the columns for.
      * @return array|null
      */
-    abstract protected function fetchColumnDefsDb($table);
+    abstract protected function fetchColumnDefsDb(string $table);
 
     /**
      * Get the canonical type based on a type string.
@@ -302,7 +302,7 @@ abstract class Db {
      * @param string $type A type string.
      * @return array|null Returns the type schema array or **null** if a type isn't found.
      */
-    public static function typeDef($type) {
+    public static function typeDef(string $type) {
         // Check for the unsigned signifier.
         $unsigned = null;
         if ($type[0] === 'u') {
@@ -527,7 +527,7 @@ abstract class Db {
      * @throws \Exception Throws an exception when there is a mismatch between the primary index and the primary key
      * defined on the columns themselves.
      */
-    private function fixIndexes($tableName, array &$tableDef, $curTableDef = null) {
+    private function fixIndexes(string $tableName, array &$tableDef, $curTableDef = null) {
         $tableDef += ['indexes' => []];
 
         // Loop through the columns and add the primary key index.
@@ -578,7 +578,7 @@ abstract class Db {
      *
      * @return string Returns the current db prefix.
      */
-    public function getPx() {
+    public function getPx(): string {
         return $this->px;
     }
 
@@ -587,7 +587,7 @@ abstract class Db {
      *
      * @param string $px The new database prefix.
      */
-    public function setPx($px) {
+    public function setPx(string $px) {
         $this->px = $px;
     }
 
@@ -599,7 +599,7 @@ abstract class Db {
      * @return int Returns an integer less than, equal to, or greater than zero if {@link $a} is
      * considered to be respectively less than, equal to, or greater than {@link $b}.
      */
-    private function indexCompare(array $a, array $b) {
+    private function indexCompare(array $a, array $b): int {
         if ($a['columns'] > $b['columns']) {
             return 1;
         } elseif ($a['columns'] < $b['columns']) {
@@ -620,7 +620,7 @@ abstract class Db {
      * @param array $options An array of additional options.
      * @return \PDOStatement Returns the result set.
      */
-    abstract public function get($table, array $where, array $options = []);
+    abstract public function get($table, array $where, array $options = []): \PDOStatement;
 
     /**
      * Get a single row from the database.
