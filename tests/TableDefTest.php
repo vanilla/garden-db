@@ -122,7 +122,7 @@ abstract class TableDefTest extends AbstractDbTest {
      */
     public function testReorderPrimaryKey() {
         $db = self::$db;
-        $def = new TableDef($db);
+        $def = new TableDef();
         $tbl = 'tstReorderPrimaryKey';
 
         $def->setTable($tbl)
@@ -149,5 +149,29 @@ abstract class TableDefTest extends AbstractDbTest {
         $actual =  $db->fetchTableDef($tbl);
 
         $this->assertDefEquals($expected, $actual);
+    }
+
+    /**
+     * Test altering an enum data type.
+     */
+    public function testAlterEnumColumn() {
+        $db = self::$db;
+        $tbl = 'testAlterEnumColumn';
+        $def = new TableDef($tbl);
+
+        $def->setColumn('a', "enum('a','b')");
+        $def->exec($db);
+
+        try {
+            $db->insert($tbl, ['a' => 'c']);
+            $this->fail();
+        } catch (\Exception $ex) {
+
+        }
+
+        $def->setColumn('a', "enum('a','b','c')");
+        $def->exec($db);
+
+        $db->insert($tbl, ['a' => 'c']);
     }
 }
