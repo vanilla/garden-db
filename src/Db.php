@@ -456,6 +456,19 @@ abstract class Db {
                     return 0;
                 }
             }
+
+            // Enum checking.
+            if (isset($curr['enum']) xor isset($new['enum'])) {
+                return 0;
+            } elseif (isset($curr['enum']) && isset($new['enum'])
+                && (
+                    count($curr['enum']) !== count($new['enum'])
+                    || !empty(array_diff($curr['enum'], $new['enum']))
+                )
+            ) {
+                return 0;
+            }
+
             return 1;
         });
 

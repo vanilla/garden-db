@@ -225,6 +225,16 @@ class SqliteDb extends MySqlDb {
             $type['dbtype'] = $translations[$type['dbtype']];
         }
 
+        // Change enum into varchar.
+        if ($type['dbtype'] === 'enum') {
+            $type['dbtype'] = 'varchar';
+            $type['maxLength'] = array_reduce(
+                $type['enum'],
+                function ($carry, $item) {
+                    return (int)max(strlen($item), $carry);
+                }, 0);
+        }
+
         if (!empty($type['autoIncrement'])) {
             $type['dbtype'] = 'integer';
         }
