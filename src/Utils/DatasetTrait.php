@@ -32,7 +32,12 @@ trait DatasetTrait {
      */
     abstract public function getData();
 
-    public function getPage() {
+    /**
+     * Get the current page.
+     *
+     * @return int Returns the page number.
+     */
+    public function getPage(): int {
         if ($this->getLimit() === 0) {
             return 1;
         }
@@ -41,8 +46,14 @@ trait DatasetTrait {
         return (int)$result;
     }
 
-    public function setPage($page) {
-        if (!is_numeric($page) || $page < 0) {
+    /**
+     * Set the current page.
+     *
+     * @param int $page A valid page number.
+     * @return $this
+     */
+    public function setPage(int $page) {
+        if ($page < 0) {
             throw new \InvalidArgumentException("Invalid page '$page.'", 500);
         }
 
@@ -59,7 +70,7 @@ trait DatasetTrait {
         return new \ArrayIterator($this->getData());
     }
 
-    public function fetchAll($mode = 0, ...$args) {
+    public function fetchAll(int $mode = 0, ...$args): array {
         if ($mode === 0) {
             return $this->getData();
         }
@@ -102,7 +113,7 @@ trait DatasetTrait {
      * @param bool $grouped If true the result will be grouped by {@link $indexKey} and each value will be an array of rows.
      * @return array Returns the array of results.
      */
-    public function fetchArrayColumn($columnKey = null, $indexKey = null, $grouped = false) {
+    public function fetchArrayColumn($columnKey = null, $indexKey = null, bool $grouped = false): array {
         $arr = $this->getData();
 
         if (empty($arr)) {
@@ -170,7 +181,7 @@ trait DatasetTrait {
      *
      * @return int Returns the count.
      */
-    public function count() {
+    public function count(): int {
         return count($this->getData());
     }
 
@@ -204,7 +215,7 @@ trait DatasetTrait {
         if (!is_numeric($offset) || $offset < 0) {
             throw new \InvalidArgumentException("Invalid offset '$offset.'", 500);
         }
-        
+
         $this->offset = (int)$offset;
         return $this;
     }

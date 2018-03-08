@@ -132,7 +132,7 @@ abstract class Db {
      * @param PDO $pdo The connection to the database.
      * @param string $px The database prefix.
      */
-    public function __construct(PDO $pdo, $px = '') {
+    public function __construct(PDO $pdo, string $px = '') {
         $this->pdo = $pdo;
         $this->px = $px;
 
@@ -182,7 +182,7 @@ abstract class Db {
      * @param string $table The name of the table to drop.
      * @param array $options An array of additional options when adding the table.
      */
-    final public function dropTable($table, array $options = []) {
+    final public function dropTable(string $table, array $options = []) {
         $options += [Db::OPTION_IGNORE => false];
         $this->dropTableDb($table, $options);
 
@@ -196,7 +196,7 @@ abstract class Db {
      * @param string $table The name of the table to drop.
      * @param array $options An array of additional options when adding the table.
      */
-    abstract protected function dropTableDb($table, array $options = []);
+    abstract protected function dropTableDb(string $table, array $options = []);
 
     /**
      * Get the names of all the tables in the database.
@@ -234,7 +234,7 @@ abstract class Db {
      * @param string $table The name of the table.
      * @return array|null Returns the table definition or null if the table does not exist.
      */
-    final public function fetchTableDef($table) {
+    final public function fetchTableDef(string $table) {
         $tableKey = strtolower($table);
 
         // First check the table cache.
@@ -263,7 +263,7 @@ abstract class Db {
      * @param string $table The name of the table to get.
      * @return array|null Returns the table def or **null** if the table doesn't exist.
      */
-    abstract protected function fetchTableDefDb($table);
+    abstract protected function fetchTableDefDb(string $table);
 
 
     /**
@@ -272,7 +272,7 @@ abstract class Db {
      * @param string $table The name of the table to get the columns for.
      * @return array|null Returns an array of column definitions.
      */
-    final public function fetchColumnDefs($table) {
+    final public function fetchColumnDefs(string $table) {
         $tableKey = strtolower($table);
 
         if (!empty($this->tables[$tableKey]['columns'])) {
@@ -294,7 +294,7 @@ abstract class Db {
      * @param string $table The name of the table to fetch the columns for.
      * @return array|null
      */
-    abstract protected function fetchColumnDefsDb($table);
+    abstract protected function fetchColumnDefsDb(string $table);
 
     /**
      * Get the canonical type based on a type string.
@@ -302,7 +302,7 @@ abstract class Db {
      * @param string $type A type string.
      * @return array|null Returns the type schema array or **null** if a type isn't found.
      */
-    public static function typeDef($type) {
+    public static function typeDef(string $type) {
         // Check for the unsigned signifier.
         $unsigned = null;
         if ($type[0] === 'u') {
@@ -527,7 +527,7 @@ abstract class Db {
      * @throws \Exception Throws an exception when there is a mismatch between the primary index and the primary key
      * defined on the columns themselves.
      */
-    private function fixIndexes($tableName, array &$tableDef, $curTableDef = null) {
+    private function fixIndexes(string $tableName, array &$tableDef, $curTableDef = null) {
         $tableDef += ['indexes' => []];
 
         // Loop through the columns and add the primary key index.
@@ -578,7 +578,7 @@ abstract class Db {
      *
      * @return string Returns the current db prefix.
      */
-    public function getPx() {
+    public function getPx(): string {
         return $this->px;
     }
 
@@ -587,7 +587,7 @@ abstract class Db {
      *
      * @param string $px The new database prefix.
      */
-    public function setPx($px) {
+    public function setPx(string $px) {
         $this->px = $px;
     }
 
@@ -599,7 +599,7 @@ abstract class Db {
      * @return int Returns an integer less than, equal to, or greater than zero if {@link $a} is
      * considered to be respectively less than, equal to, or greater than {@link $b}.
      */
-    private function indexCompare(array $a, array $b) {
+    private function indexCompare(array $a, array $b): int {
         if ($a['columns'] > $b['columns']) {
             return 1;
         } elseif ($a['columns'] < $b['columns']) {
@@ -620,7 +620,7 @@ abstract class Db {
      * @param array $options An array of additional options.
      * @return \PDOStatement Returns the result set.
      */
-    abstract public function get($table, array $where, array $options = []);
+    abstract public function get($table, array $where, array $options = []): \PDOStatement;
 
     /**
      * Get a single row from the database.
@@ -656,7 +656,7 @@ abstract class Db {
      * @return mixed Returns the id of the inserted record, **true** if the table doesn't have an auto increment, or **false** otherwise.
      * @see Db::load()
      */
-    abstract public function insert($table, array $row, array $options = []);
+    abstract public function insert(string $table, array $row, array $options = []);
 
     /**
      * Load many rows into a table.
@@ -668,7 +668,7 @@ abstract class Db {
      * @param array $options An array of options for the inserts. See {@link Db::insert()} for details.
      * @see Db::insert()
      */
-    public function load($table, $rows, array $options = []) {
+    public function load(string $table, $rows, array $options = []) {
         foreach ($rows as $row) {
             $this->insert($table, $row, $options);
         }
@@ -684,7 +684,7 @@ abstract class Db {
      * @param array $options An array of options for the update.
      * @return int Returns the number of affected rows.
      */
-    abstract public function update($table, array $set, array $where, array $options = []);
+    abstract public function update(string $table, array $set, array $where, array $options = []): int;
 
     /**
      * Delete rows from a table.
@@ -697,7 +697,7 @@ abstract class Db {
      * : Truncate the table instead of deleting rows. In this case {@link $where} must be blank.
      * @return int Returns the number of affected rows.
      */
-    abstract public function delete($table, array $where, array $options = []);
+    abstract public function delete(string $table, array $where, array $options = []): int;
 
     /**
      * Reset the internal table definition cache.
@@ -717,7 +717,7 @@ abstract class Db {
      * @param array $indexDef The index definition.
      * @return string Returns the index name.
      */
-    protected function buildIndexName($tableName, array $indexDef) {
+    protected function buildIndexName(string $tableName, array $indexDef): string {
         $indexDef += ['type' => Db::INDEX_IX, 'suffix' => ''];
 
         $type = $indexDef['type'];
@@ -740,7 +740,7 @@ abstract class Db {
      * @return \PDOStatement Returns the result of the query.
      * @throws \PDOException Throws an exception if something went wrong during the query.
      */
-    protected function query($sql, array $params = [], array $options = []) {
+    protected function query(string $sql, array $params = [], array $options = []): \PDOStatement {
         $options += [
             Db::OPTION_FETCH_MODE => $this->getFetchArgs()
         ];
@@ -771,7 +771,7 @@ abstract class Db {
      * @param array $options Additional options.
      * @return int
      */
-    protected function queryModify($sql, array $params = [], array $options = []) {
+    protected function queryModify(string $sql, array $params = [], array $options = []): int {
         $options += [Db::OPTION_FETCH_MODE => 0];
         $stm = $this->query($sql, $params, $options);
         return $stm->rowCount();
@@ -785,7 +785,7 @@ abstract class Db {
      * @param array $options Additional options.
      * @return mixed Returns the record ID.
      */
-    protected function queryID($sql, array $params = [], array $options = []) {
+    protected function queryID(string $sql, array $params = [], array $options = []) {
         $options += [Db::OPTION_FETCH_MODE => 0];
         $this->query($sql, $params, $options);
         $r = $this->getPDO()->lastInsertId();
@@ -799,7 +799,7 @@ abstract class Db {
      * @param string $sql The query to execute.
      * @param array $options Additional options.
      */
-    protected function queryDefine($sql, array $options = []) {
+    protected function queryDefine(string $sql, array $options = []) {
         $options += [Db::OPTION_FETCH_MODE => 0];
         $this->query($sql, [], $options);
     }
@@ -850,7 +850,7 @@ abstract class Db {
      * @param string|Literal $identifier The identifier to escape.
      * @return string Returns the field properly escaped.
      */
-    public function escape($identifier) {
+    public function escape($identifier): string {
         if ($identifier instanceof Literal) {
             return $identifier->getValue($this);
         }
@@ -863,7 +863,7 @@ abstract class Db {
      * @param string $str The string to escape.
      * @return string Returns an escaped string.
      */
-    protected function escapeLike($str) {
+    protected function escapeLike(string $str): string {
         return addcslashes($str, '_%');
     }
 
@@ -874,7 +874,7 @@ abstract class Db {
      * @param bool $escape Whether or not to escape the output.
      * @return string Returns a full table name.
      */
-    protected function prefixTable($table, $escape = true) {
+    protected function prefixTable($table, bool $escape = true): string {
         if ($table instanceof Identifier) {
             return $escape ? $table->escape($this) : (string)$table;
         } else {
@@ -889,7 +889,7 @@ abstract class Db {
      * @param string $table The name of the table to strip.
      * @return string Returns the table name stripped of the prefix.
      */
-    protected function stripPrefix($table) {
+    protected function stripPrefix(string $table): string {
         $len = strlen($this->px);
         if (strcasecmp(substr($table, 0, $len), $this->px) === 0) {
             $table = substr($table, $len);
@@ -905,7 +905,7 @@ abstract class Db {
      * @return string Returns the value, optionally quoted.
      * @internal param bool $quote Whether or not to quote the value.
      */
-    public function quote($value, $column = '') {
+    public function quote($value, string $column = ''): string {
         if ($value instanceof Literal) {
             /* @var Literal $value */
             return $value->getValue($this, $column);
@@ -919,7 +919,7 @@ abstract class Db {
      *
      * @return \PDO
      */
-    public function getPDO() {
+    public function getPDO(): PDO {
         return $this->pdo;
     }
 

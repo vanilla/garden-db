@@ -100,7 +100,7 @@ class ArraySet implements  \IteratorAggregate, DatasetInterface {
     /**
      * {@inheritdoc}
      */
-    public function setOrder(...$columns) {
+    public function setOrder(string ...$columns) {
         if ($columns !== $this->order) {
             $this->toSort = true;
         }
@@ -112,7 +112,7 @@ class ArraySet implements  \IteratorAggregate, DatasetInterface {
     /**
      * {@inheritdoc}
      */
-    public function count() {
+    public function count(): int {
         $count = count($this->data);
         $limit = $this->getLimit();
         $offset = $this->getOffset();

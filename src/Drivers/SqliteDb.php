@@ -148,14 +148,14 @@ class SqliteDb extends MySqlDb {
     /**
      * {@inheritdoc}
      */
-    protected function buildLike($column, $value) {
+    protected function buildLike(string $column, $value): string {
         return "$column like ".$this->quote($value)." escape '\\'";
     }
 
     /**
      * {@inheritdoc}
      */
-    protected function buildUpdate($table, array $set, array $where, array $options = []) {
+    protected function buildUpdate($table, array $set, array $where, array $options = []): string {
         $sql = 'update '.
             (empty($options[Db::OPTION_IGNORE]) ? '' : 'or ignore ').
             $this->prefixTable($table).
@@ -329,7 +329,7 @@ class SqliteDb extends MySqlDb {
      * @param string $table The table to get the columns for.
      * @return array|null Returns an array of columns.
      */
-    protected function fetchColumnDefsDb($table) {
+    protected function fetchColumnDefsDb(string $table) {
         $cdefs = $this->query('pragma table_info('.$this->prefixTable($table, false).')')->fetchAll(PDO::FETCH_ASSOC);
         if (empty($cdefs)) {
             return null;
@@ -457,7 +457,7 @@ class SqliteDb extends MySqlDb {
     /**
      * {@inheritdoc}
      */
-    public function insert($table, array $row, array $options = []) {
+    public function insert(string $table, array $row, array $options = []) {
         // Sqlite doesn't support upsert so do upserts manually.
         if (self::val(Db::OPTION_UPSERT, $options)) {
             unset($options[Db::OPTION_UPSERT]);
@@ -495,7 +495,7 @@ class SqliteDb extends MySqlDb {
      * @return string Returns the value, optionally quoted.
      * @internal param bool $quote Whether or not to quote the value.
      */
-    public function quote($value, $column = '') {
+    public function quote($value, string $column = ''): string {
         if ($value instanceof Literal) {
             /* @var Literal $value */
             return $value->getValue($this, $column);
