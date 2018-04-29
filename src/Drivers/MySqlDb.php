@@ -715,6 +715,9 @@ class MySqlDb extends Db {
      */
     protected function indexDefString($table, array $def) {
         $indexName = $this->escape($this->buildIndexName($table, $def));
+        if (empty($def['columns'])) {
+            throw new \DomainException("The `$table`.$indexName index has no columns.", 500);
+        }
         switch (self::val('type', $def, Db::INDEX_IX)) {
             case Db::INDEX_IX:
                 return "index $indexName ".$this->bracketList($def['columns'], '`');
@@ -816,6 +819,8 @@ class MySqlDb extends Db {
             return (string)(int)$value;
         } elseif ($value instanceof \DateTimeInterface) {
             $value = $value->format(self::MYSQL_DATE_FORMAT);
+        } elseif ($value === null) {
+            return 'null';
         }
 
         return parent::quote($value, $column);
