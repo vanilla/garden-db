@@ -142,6 +142,10 @@ class TableDef implements \JsonSerializable {
      * @return $this
      */
     public function addIndex($type, ...$columns) {
+        if (empty($columns)) {
+            throw new \InvalidArgumentException("An index must contain at least one column.", 500);
+        }
+
         $type = strtolower($type);
 
         // Look for a current index row.

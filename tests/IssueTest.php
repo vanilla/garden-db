@@ -7,7 +7,7 @@
 
 namespace Garden\Db\Tests;
 
-
+use Garden\Db\Db;
 use Garden\Db\TableDef;
 
 abstract class IssueTest extends AbstractDbTest {
@@ -40,5 +40,34 @@ abstract class IssueTest extends AbstractDbTest {
         $this->assertNotNull($b);
 
 //        $tb2->exec($db2);
+    }
+
+    /**
+     * Test inserting a null value.
+     */
+    public function testNullInsert() {
+        $tbl = new TableDef('null_insert');
+        $tbl->setColumn('dt', 'datetime', null);
+
+        $db = static::$db;
+        $tbl->exec($db);
+
+        $db->insert('null_insert', ['dt' => null]);
+    }
+
+    /**
+     * Test updating to a null value.
+     */
+    public function testNullUpdate() {
+        $tbl = new TableDef('null_update');
+        $tbl->setColumn('id', 'int')
+            ->setColumn('dt', 'datetime', null)
+            ->addIndex(Db::INDEX_PK, 'id');
+
+        $db = static::$db;
+        $tbl->exec($db);
+
+        $db->insert('null_update', ['id' => 1, 'dt' => new \DateTime('2018-01-01')]);
+        $r = $db->update('null_update', ['dt' => null], ['id' => 1]);
     }
 }
