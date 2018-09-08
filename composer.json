@@ -9,15 +9,15 @@
 		}
 	],
 	"require": {
-		"php": ">=7.0",
-		"vanilla/garden-schema": "^1.7.5"
+		"php": ">=7.1",
+		"vanilla/garden-schema": "^2.0"
 	},
 	"require-dev": {
 		"bobthecow/faker": "dev-master"
 	},
 	"config": {
 		"platform": {
-			"php": "7.0.26"
+			"php": "7.1"
 		}
 	},
 	"autoload": {
