@@ -295,7 +295,7 @@ class Model {
      */
     public function validate($row, $sparse = false) {
         $schema = $this->getSchema();
-        $valid = $schema->validate($row, $sparse);
+        $valid = $schema->validate($row, ['sparse' => $sparse]);
 
         return $valid;
     }

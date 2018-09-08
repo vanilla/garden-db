@@ -15,6 +15,7 @@ namespace Garden\Db;
 class Aggregate extends Literal {
     const AVG = 'avg';
     const COUNT = 'count';
+    const COUNT_DISTINCT = 'count-distinct';
     const MAX = 'max';
     const MIN = 'min';
     const SUM = 'sum';
@@ -31,7 +32,13 @@ class Aggregate extends Literal {
      * @param string $alias The alias of the aggregate. If left out then the function name will be used as the alias.
      */
     public function __construct($func, $column, $alias = '') {
-        parent::__construct('%1$s(%2$s) as %3$s');
+        $format = '%1$s(%2$s) as %3$s';
+        if ($func === static::COUNT_DISTINCT) {
+            $format = '%1$s(distinct %2$s) as %3$s';
+            $func = static::COUNT;
+        }
+
+        parent::__construct($format);
 
         $this->func = $func;
         $this->column = $column;
