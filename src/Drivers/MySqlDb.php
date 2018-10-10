@@ -357,7 +357,12 @@ class MySqlDb extends Db {
 
         // Unsigned is represented differently in MySQL.
         $unsigned = !empty($type['unsigned']);
-        unset ($type['unsigned']);
+        unset($type['unsigned']);
+
+        // The max length is not specified for text columns.
+        if (in_array($type['dbtype'], ['tinytext', 'text', 'mediumtext', 'longtext'])) {
+            unset($type['maxLength']);
+        }
 
         $dbType = static::dbType($type).($unsigned ? ' unsigned' : '');
 

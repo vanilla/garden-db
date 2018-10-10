@@ -70,4 +70,26 @@ abstract class IssueTest extends AbstractDbTest {
         $db->insert('null_update', ['id' => 1, 'dt' => new \DateTime('2018-01-01')]);
         $r = $db->update('null_update', ['dt' => null], ['id' => 1]);
     }
+
+    /**
+     * Test creating a column with medium text.
+     */
+    public function testTextCreate() {
+        $tbl = new TableDef('text');
+        $tbl->setPrimaryKey('id')
+            ->setColumn('body0', 'tinytext')
+            ->setColumn('body1', 'text')
+            ->setColumn('body2', 'mediumtext')
+            ->setColumn('body3', 'longtext');
+
+        $tbl->exec(static::$db);
+
+        $tbl->setPrimaryKey('id')
+            ->setColumn('body0', 'longtext')
+            ->setColumn('body1', 'mediumtext')
+            ->setColumn('body2', 'text')
+            ->setColumn('body3', 'tinytext');
+
+        $tbl->exec(static::$db);
+    }
 }
