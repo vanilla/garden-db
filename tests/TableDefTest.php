@@ -174,4 +174,14 @@ abstract class TableDefTest extends AbstractDbTest {
 
         $db->insert($tbl, ['a' => 'c']);
     }
+
+    public function testTimestampColumn() {
+        $tbl = "testTimestampColumn";
+        $def = new TableDef($tbl);
+
+        $def->setColumn('a', 'timestamp', 'current_timestamp')
+            ->setColumn('b', 'timestamp');
+
+        $def->exec(self::$db);
+    }
 }

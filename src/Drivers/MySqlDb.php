@@ -696,7 +696,20 @@ class MySqlDb extends Db {
         }
 
         if (isset($cdef['default'])) {
-            $result .= ' default '.$this->quote($cdef['default']);
+            if (isset($cdef['default'])) {
+                $default = $cdef['default'];
+
+                switch ($cdef['dbtype']) {
+                    case 'timestamp':
+                        if (strcasecmp($default, 'current_timestamp') === 0) {
+                            break;
+                        }
+                    default:
+                        $default = $this->quote($cdef['default']);
+                }
+
+                $result .= " default $default";
+            }
         }
 
         if (self::val('autoIncrement', $cdef)) {
