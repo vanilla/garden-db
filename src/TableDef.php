@@ -102,6 +102,8 @@ class TableDef implements \JsonSerializable {
             // Booleans have a special meaning.
             $column['allowNull'] = false;
             $column['default'] = $nullDefault;
+        } elseif ($column['dbtype'] === 'timestamp' && empty($column['default'])) {
+            $column['default'] = 'current_timestamp';
         } elseif ($nullDefault === null || $nullDefault === true) {
             $column['allowNull'] = true;
         } elseif ($nullDefault === false) {
