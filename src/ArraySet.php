@@ -24,7 +24,7 @@ class ArraySet implements  \IteratorAggregate, DatasetInterface {
      * Construct a new {@link ArraySet} object.
      *
      * @param array|\Traversable $data The initial data in the array.
-     * @param string[] The default sort order. Supply this to prevent a manual sort.
+     * @param string[] $order The default sort order. Supply this to prevent a manual sort.
      */
     public function __construct($data = [], $order = []) {
         $this->setData($data);
