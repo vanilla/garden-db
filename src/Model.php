@@ -8,6 +8,7 @@
 namespace Garden\Db;
 
 use Garden\Schema\Schema;
+use Garden\Schema\ValidationException;
 
 class Model {
     use Utils\FetchModeTrait { setFetchMode as private; }
@@ -265,6 +266,15 @@ class Model {
         return $r->firstRow();
     }
 
+    /**
+     * Insert a row into the database.
+     *
+     * @param array|\ArrayAccess $row The row to insert.
+     * @param array $options Options to control the insert.
+     * @return mixed
+     * @throws ValidationException Throws an exception if the row doesn't validate.
+     * @throws \Garden\Schema\RefNotFoundException Throws an exception if the schema configured incorrectly.
+     */
     public function insert($row, array $options = []) {
         $valid = $this->validate($row, false);
         $serialized = $this->serialize($valid);
@@ -273,7 +283,17 @@ class Model {
         return $r;
     }
 
-    public function update(array $set, array $where, array $options = []) {
+    /**
+     * Update a row in the database.
+     *
+     * @param array $set The columns to update.
+     * @param array $where The column update filter.
+     * @param array $options Options to control the update.
+     * @return int Returns the number of affected rows.
+     * @throws ValidationException Throws an exception if the row doesn't validate.
+     * @throws \Garden\Schema\RefNotFoundException Throws an exception if the schema isn't configured correctly.
+     */
+    public function update(array $set, array $where, array $options = []): int {
         $valid = $this->validate($set, true);
         $serialized = $this->serialize($valid);
 
@@ -281,7 +301,16 @@ class Model {
         return $r;
     }
 
-    public function updateID($id, $set) {
+    /**
+     * Update a row in the database with a known primary key.
+     *
+     * @param mixed $id A single ID value or an array for multi-column primary keys.
+     * @param array $set The columns to update.
+     * @return int Returns the number of affected rows.
+     * @throws ValidationException Throws an exception if the row doesn't validate.
+     * @throws \Garden\Schema\RefNotFoundException Throws an exception if you have an invalid schema reference.
+     */
+    public function updateID($id, array $set): int {
         $r = $this->update($set, $this->mapID($id));
         return $r;
     }
@@ -292,6 +321,8 @@ class Model {
      * @param array|\ArrayAccess $row The row to validate.
      * @param bool $sparse Whether or not the validation should be sparse (during update).
      * @return array Returns valid data.
+     * @throws ValidationException Throws an exception if the row doesn't validate.
+     * @throws \Garden\Schema\RefNotFoundException Throws an exception if you have an invalid schema reference.
      */
     public function validate($row, $sparse = false) {
         $schema = $this->getSchema();

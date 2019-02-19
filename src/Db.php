@@ -423,6 +423,7 @@ abstract class Db {
      *
      * @param array $tableDef The table definition.
      * @param array $options An array of additional options when adding the table.
+     * @throws \Exception Throws an exception if there is a mismatch in the primary key column and index.
      */
     final public function defineTable(array $tableDef, array $options = []) {
         $options += [Db::OPTION_DROP => false];
