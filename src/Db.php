@@ -449,7 +449,7 @@ abstract class Db {
 
         $alterDef['add']['columns'] = array_diff_key($newColumns, $curColumns);
         $alterDef['alter']['columns'] = array_uintersect_assoc($newColumns, $curColumns, function ($new, $curr) {
-            $search = ['dbtype', 'allowNull', 'default'];
+            $search = ['dbtype', 'allowNull', 'default', 'maxLength'];
             foreach ($search as $key) {
                 if (self::val($key, $curr) !== self::val($key, $new)) {
                     // Return 0 if the values are different, not the same.

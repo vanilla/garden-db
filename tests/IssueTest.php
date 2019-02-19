@@ -92,4 +92,22 @@ abstract class IssueTest extends AbstractDbTest {
 
         $tbl->exec(static::$db);
     }
+
+    /**
+     * Test altering the length of a varchar column.
+     */
+    public function testVarcharLengthChange() {
+        $tbl = new TableDef('varCharLengthChange');
+        $tbl->setColumn('a', 'varchar(20)');
+        $tbl->exec(static::$db);
+
+        $tbl->setColumn('a', 'varchar(30)');
+        $tbl->exec(static::$db);
+
+        static::$db->reset();
+        $cols = static::$db->fetchColumnDefs($tbl->getTable());
+
+        $this->assertSame(30, $cols['a']['maxLength']);
+
+    }
 }
