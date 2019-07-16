@@ -110,4 +110,21 @@ abstract class IssueTest extends AbstractDbTest {
         $this->assertSame(30, $cols['a']['maxLength']);
 
     }
+
+    /**
+     * Tests a bug when altering an existing table after creating a new table.
+     */
+    public function testAlterAfterCreate() {
+        for ($i = 0; $i < 2; $i++) {
+            $tbl1 = new TableDef("table1_$i");
+            $tbl1->setColumn('a', 'varchar(20)');
+            $tbl1->exec(static::$db);
+
+            $tbl2 = new TableDef('table2');
+            $tbl2->setColumn('a', 'varchar(20)');
+            $tbl2->exec(static::$db);
+
+            static::$db->reset();
+        }
+    }
 }
