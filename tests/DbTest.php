@@ -7,6 +7,7 @@
 
 namespace Garden\Db\Tests;
 
+use Garden\Db\Aggregate;
 use Garden\Db\Db;
 use Garden\Db\Query;
 use Garden\Db\TableDef;
@@ -44,7 +45,10 @@ abstract class DbTest extends AbstractDbTest {
 
         self::$db->defineTable($tableDef);
 
-        return self::$db->fetchTableDef('user');
+        $r = self::$db->fetchTableDef('user');
+        $this->assertIsArray($r);
+
+        return $r;
     }
 
     /**
@@ -314,7 +318,12 @@ abstract class DbTest extends AbstractDbTest {
     public function testLoad() {
         $db = self::$db;
 
+        $countBefore = $this->getCountUser();
         $db->load('user', $this->provideUsers(100), [Db::OPTION_IGNORE => true]);
+        $countAfter = $this->getCountUser();
+
+
+        $this->assertGreaterThanOrEqual(100, $countAfter - $countBefore);
     }
 
     /**
@@ -327,7 +336,11 @@ abstract class DbTest extends AbstractDbTest {
 
         $users = iterator_to_array($this->provideUsers(10));
 
+        $countBefore = $this->getCountUser();
         $db->load('user', $users, [Db::OPTION_REPLACE => true]);
+        $countAfter = $this->getCountUser();
+
+        $this->assertGreaterThanOrEqual(10, $countAfter - $countBefore);
     }
 
     /**
@@ -404,5 +417,15 @@ abstract class DbTest extends AbstractDbTest {
         $this->createPopulatedUserTable(__FUNCTION__);
 
         $data = self::$db->get(__FUNCTION__, []);
+
+        $this->assertNotEmpty($data);
+    }
+
+    /**
+     * @return mixed
+     */
+    private function getCountUser() {
+        $count = self::$db->getOne('user', [], ['columns' => [new Aggregate(Aggregate::COUNT, '*')]])['count'];
+        return $count;
     }
 }

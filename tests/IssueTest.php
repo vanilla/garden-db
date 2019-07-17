@@ -53,6 +53,9 @@ abstract class IssueTest extends AbstractDbTest {
         $tbl->exec($db);
 
         $db->insert('null_insert', ['dt' => null]);
+
+        // This test is just to check DB exceptions.
+        $this->assertTrue(true);
     }
 
     /**
@@ -69,6 +72,9 @@ abstract class IssueTest extends AbstractDbTest {
 
         $db->insert('null_update', ['id' => 1, 'dt' => new \DateTime('2018-01-01')]);
         $r = $db->update('null_update', ['dt' => null], ['id' => 1]);
+
+        // This test is just to check DB exceptions.
+        $this->assertTrue(true);
     }
 
     /**
@@ -91,6 +97,9 @@ abstract class IssueTest extends AbstractDbTest {
             ->setColumn('body3', 'tinytext');
 
         $tbl->exec(static::$db);
+
+        // This test is just to check DB exceptions.
+        $this->assertTrue(true);
     }
 
     /**
@@ -126,5 +135,8 @@ abstract class IssueTest extends AbstractDbTest {
 
             static::$db->reset();
         }
+
+        // This test is just to check DB exceptions.
+        $this->assertTrue(true);
     }
 }
