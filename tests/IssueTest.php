@@ -53,6 +53,9 @@ abstract class IssueTest extends AbstractDbTest {
         $tbl->exec($db);
 
         $db->insert('null_insert', ['dt' => null]);
+
+        // This test is just to check DB exceptions.
+        $this->assertTrue(true);
     }
 
     /**
@@ -69,6 +72,9 @@ abstract class IssueTest extends AbstractDbTest {
 
         $db->insert('null_update', ['id' => 1, 'dt' => new \DateTime('2018-01-01')]);
         $r = $db->update('null_update', ['dt' => null], ['id' => 1]);
+
+        // This test is just to check DB exceptions.
+        $this->assertTrue(true);
     }
 
     /**
@@ -91,6 +97,9 @@ abstract class IssueTest extends AbstractDbTest {
             ->setColumn('body3', 'tinytext');
 
         $tbl->exec(static::$db);
+
+        // This test is just to check DB exceptions.
+        $this->assertTrue(true);
     }
 
     /**
@@ -109,5 +118,25 @@ abstract class IssueTest extends AbstractDbTest {
 
         $this->assertSame(30, $cols['a']['maxLength']);
 
+    }
+
+    /**
+     * Tests a bug when altering an existing table after creating a new table.
+     */
+    public function testAlterAfterCreate() {
+        for ($i = 0; $i < 2; $i++) {
+            $tbl1 = new TableDef("table1_$i");
+            $tbl1->setColumn('a', 'varchar(20)');
+            $tbl1->exec(static::$db);
+
+            $tbl2 = new TableDef('table2');
+            $tbl2->setColumn('a', 'varchar(20)');
+            $tbl2->exec(static::$db);
+
+            static::$db->reset();
+        }
+
+        // This test is just to check DB exceptions.
+        $this->assertTrue(true);
     }
 }

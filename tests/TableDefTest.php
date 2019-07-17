@@ -173,6 +173,9 @@ abstract class TableDefTest extends AbstractDbTest {
         $def->exec($db);
 
         $db->insert($tbl, ['a' => 'c']);
+
+        // This test is just to check DB exceptions.
+        $this->assertTrue(true);
     }
 
     public function testTimestampColumn() {
@@ -183,5 +186,8 @@ abstract class TableDefTest extends AbstractDbTest {
             ->setColumn('b', 'timestamp');
 
         $def->exec(self::$db);
+
+        // This test is just to check DB exceptions.
+        $this->assertTrue(true);
     }
 }

@@ -435,6 +435,11 @@ abstract class Db {
 
         $this->fixIndexes($tableName, $tableDef, $curTable);
 
+        if ($this->tableNames === null) {
+            // Fetch all tables here now so the cache knows all tables that exist.
+            $this->fetchTableNames();
+        }
+
         if (!$curTable) {
             $this->createTableDb($tableDef, $options);
             $this->tables[$tableKey] = $tableDef;
@@ -509,10 +514,6 @@ abstract class Db {
         // Update the cached schema.
         $tableDef['name'] = $tableName;
         $this->tables[$tableKey] = $tableDef;
-
-        if ($this->tableNames === null) {
-            $this->fetchTableNames();
-        }
 
         $this->tableNames[$tableKey] = $tableName;
     }
