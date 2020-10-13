@@ -65,6 +65,7 @@ abstract class Db {
         'longtext' => ['type' => 'string', 'schema' => ['maxLength' => 4294967295]],
         'binary' => ['type' => 'string', 'length' => true],
         'varbinary' => ['type' => 'string', 'length' => true],
+        'json' => ['type' => 'string'],
 
         // Boolean
         'bool' => ['type' => 'boolean'],
