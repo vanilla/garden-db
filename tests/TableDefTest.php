@@ -190,4 +190,21 @@ abstract class TableDefTest extends AbstractDbTest {
         // This test is just to check DB exceptions.
         $this->assertTrue(true);
     }
+
+    /**
+     * Make sure the JSON type is allowed.
+     */
+    public function testJsonColumn() {
+        $def = new TableDef('misc');
+        $db = self::$db;
+        $def
+            ->setPrimaryKey('miscID')
+            ->setColumn('name', 'varchar(20)')
+            ->setColumn('data', 'json')
+            ->addIndex(Db::INDEX_UNIQUE, 'name')
+        ;
+
+        $def->exec(self::$db);
+        $this->assertTrue(true);
+    }
 }
