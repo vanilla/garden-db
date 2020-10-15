@@ -25,7 +25,7 @@ abstract class AbstractDbTest extends TestCase {
     /**
      * Set up the db link for the test cases.
      */
-    public static function setUpBeforeClass() {
+    public static function setUpBeforeClass(): void {
         // Drop all of the tables in the database.
         $db = static::createDb();
         $tables = $db->fetchTableNames();
