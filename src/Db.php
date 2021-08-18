@@ -84,6 +84,7 @@ abstract class Db {
         // Date/Time
         'datetime' => ['type' => 'datetime'],
         'timestamp' => ['type' => 'datetime'],
+        'date' => ['type' => 'datetime'],
 
         // Enum
         'enum' => ['type' => 'string', 'enum' => true],
@@ -103,7 +104,7 @@ abstract class Db {
         'int32' => 'int',
         'bigint' => 'long',
         'int64' => 'long',
-        'real' => 'double'
+        'real' => 'double',
     ];
 
     /**
